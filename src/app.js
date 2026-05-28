@@ -2,26 +2,11 @@ const express = require("express");
 const app = express()
 const PORT = 3001 
 
-
-app.use("/abhay",(req,res)=>{
-    res.send("abhay route")
+app.get("/user",(req,res)=>{
+    res.send({name:"abhay",age:21,gender:"male"})
 })
-app.use("/abhay/tt",(req,res)=>{
-    res.send("abhay route of ttttt")
-})
-app.use("/soumen",(req,res)=>{
-    res.send("soumen route")
-})
-app.use("/rahul",(req,res)=>{
-    res.send("rahul route")
-})
-app.use("/dipankar",(req,res)=>{
-    res.send("dipankar route")
-})
-app.use("/biswajit",(req,res)=>{
-    res.send("biswajit route")
-})
-app.use("/",(req,res)=>{
+// this will match all http method like get,post,put,delete,patch,options,head,trace
+app.use("/test",(req,res)=>{
     res.send("Hello ADA")
 })
 
