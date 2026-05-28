@@ -2,11 +2,12 @@ const express = require("express");
 const app = express()
 const PORT = 3001 
 
-app.use("/",(req,res)=>{
-    res.send("Hello ADA")
-})
+
 app.use("/abhay",(req,res)=>{
     res.send("abhay route")
+})
+app.use("/abhay/tt",(req,res)=>{
+    res.send("abhay route of ttttt")
 })
 app.use("/soumen",(req,res)=>{
     res.send("soumen route")
@@ -19,6 +20,9 @@ app.use("/dipankar",(req,res)=>{
 })
 app.use("/biswajit",(req,res)=>{
     res.send("biswajit route")
+})
+app.use("/",(req,res)=>{
+    res.send("Hello ADA")
 })
 
 
