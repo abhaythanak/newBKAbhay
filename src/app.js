@@ -6,8 +6,17 @@ app.get("/user",(req,res)=>{
     res.send({name:"abhay",age:21,gender:"male"})
 })
 // this will match all http method like get,post,put,delete,patch,options,head,trace
-app.use("/test",(req,res)=>{
-    res.send("Hello ADA")
+app.use("/test",(req,res,next)=>{
+   // res.send("Hello ADA")
+   console.log("hello")
+   next();
+},(req,res,next)=>{
+    console.log("next1")
+    next();
+},(req,res,next)=>{
+    console.log("next2")
+    //res.send("hello")
+     next()
 })
 
 
