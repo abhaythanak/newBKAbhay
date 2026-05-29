@@ -1,6 +1,6 @@
 # newBKAbhay
 
-A simple Node.js + Express backend server.
+A simple **Node.js + Express 5** backend server.
 
 ---
 
@@ -56,15 +56,36 @@ npm run dev
 npm start
 ```
 
+> Both `npm start` and `npm run dev` use **nodemon** to auto-reload on file changes.
+
 The server will start on **http://localhost:3001**
 
 ---
 
 ## 🛣️ Available Routes
 
-| Method | Route  | Description      |
-|--------|--------|------------------|
-| GET    | `/bat` | Returns Hello ADA |
+| Method | Route   | Description                                        |
+|--------|---------|----------------------------------------------------|
+| GET    | `/user` | Returns a JSON object with user info (name, age, gender) |
+| ALL    | `/test` | Middleware chain — logs `hello`, `next1`, `next2` then sends `"hello"` |
+
+### Example Response — `GET /user`
+
+```json
+{
+  "name": "abhay",
+  "age": 21,
+  "gender": "male"
+}
+```
+
+### `/test` Middleware Chain
+
+The `/test` route uses `app.use()` so it matches **all HTTP methods** (GET, POST, PUT, DELETE, etc.) and runs three middleware functions in sequence:
+
+1. Logs `"hello"` → calls `next()`
+2. Logs `"next1"` → calls `next()`
+3. Logs `"next2"` → sends response `"hello"` → calls `next()`
 
 ---
 
@@ -110,14 +131,22 @@ git push -u origin main
 
 ## 📜 Scripts
 
-| Command       | Description                        |
-|---------------|------------------------------------|
-| `npm run dev` | Start server with nodemon (watch)  |
-| `npm start`   | Start server normally              |
+| Command       | Description                              |
+|---------------|------------------------------------------|
+| `npm run dev` | Start server with nodemon (watch mode)   |
+| `npm start`   | Start server with nodemon                |
+
+---
+
+## 📦 Dependencies
+
+| Package   | Version  | Purpose             |
+|-----------|----------|---------------------|
+| `express` | `^5.2.1` | HTTP server framework |
+| `nodemon` | latest   | Auto-reload on file change |
 
 ---
 
 ## 📄 License
 
 ISC © at
-# newBKAbhay
