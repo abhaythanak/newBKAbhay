@@ -15,8 +15,8 @@ app.use("/test",(req,res,next)=>{
     next();
 },(req,res,next)=>{
     console.log("next2")
-    //res.send("hello")
-     next()
+    res.send("hello")
+    next()
 })
 
 
