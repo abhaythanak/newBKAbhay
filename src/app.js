@@ -1,8 +1,9 @@
 const express = require("express");
 const app = express()
 const PORT = 3001 
+const {userAuth} = require('./auth')
 
-app.get("/user",(req,res)=>{
+app.get("/user",userAuth,(req,res)=>{
     res.send({name:"abhay",age:21,gender:"male"})
 })
 // this will match all http method like get,post,put,delete,patch,options,head,trace
