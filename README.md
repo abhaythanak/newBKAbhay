@@ -86,7 +86,7 @@ newBKAbhay/
 
 ### `POST /signup`
 
-Creates a new user from the JSON request body and saves it to the database.
+Creates a new user from the JSON request body and saves it to the database. Checks for duplicate `emailId` before creating.
 
 The server uses `express.json()` middleware to parse incoming JSON payloads.
 
@@ -102,8 +102,9 @@ The server uses `express.json()` middleware to parse incoming JSON payloads.
 ```
 
 **Response:**
-- `201 Created` — `"user created Successfully"`
-- `400 Bad Request` — `"error saving the user: <error message>"`
+- `201 Created` — `{ "message": "User created successfully", "user": { ... } }`
+- `400 Bad Request` — `"Email Id already present."` (duplicate email)
+- `500 Internal Server Error` — `{ "message": "Error saving user", "error": "..." }`
 
 ```js
 // Example usage
@@ -118,6 +119,7 @@ fetch('http://localhost:5555/signup', {
   })
 });
 ```
+
 
 ---
 
