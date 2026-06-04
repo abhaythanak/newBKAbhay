@@ -105,35 +105,6 @@ The server uses `express.json()` middleware to parse incoming JSON payloads.
 - `201 Created` — `"user created Successfully"`
 - `400 Bad Request` — `"error saving the user: <error message>"`
 
----
-
-### `GET /feed`
-
-Fetches users from the database. Accepts an optional filter via the request body.
-
-**Request Body (JSON, optional):**
-
-```json
-{
-  "emailId": "john@example.com"
-}
-```
-
-> Pass an empty body `{}` to return all users.
-
-**Response:**
-- `200 OK` — Array of matching user objects
-- `404 Not Found` — `"error saving the user: <error message>"`
-
-```js
-// Example — fetch all users
-fetch('http://localhost:5555/feed', {
-  method: 'GET',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({})
-});
-```
-
 ```js
 // Example usage
 fetch('http://localhost:5555/signup', {
@@ -146,6 +117,48 @@ fetch('http://localhost:5555/signup', {
     password: 'yourpassword'
   })
 });
+```
+
+---
+
+### `GET /user`
+
+Fetches a single user by `emailId` from the request body.
+
+**Request Body (JSON):**
+
+```json
+{
+  "emailId": "john@example.com"
+}
+```
+
+**Response:**
+- `200 OK` — The matched user object
+- `404 Not Found` — `"user not found"` (if no match) or error message
+
+```js
+// Example usage
+fetch('http://localhost:5555/user', {
+  method: 'GET',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ emailId: 'john@example.com' })
+});
+```
+
+---
+
+### `GET /feed`
+
+Fetches **all users** from the database. No request body required.
+
+**Response:**
+- `200 OK` — Array of all user objects
+- `404 Not Found` — `"error saving the user: <error message>"`
+
+```js
+// Example usage
+fetch('http://localhost:5555/feed');
 ```
 
 ---
