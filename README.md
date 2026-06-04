@@ -192,6 +192,34 @@ fetch('http://localhost:5555/user', {
 
 ---
 
+### `PATCH /user`
+
+Updates an existing user's data by `userId`. Pass any fields to update along with the `userId`.
+
+**Request Body (JSON):**
+
+```json
+{
+  "userId": "64abc123def456",
+  "firstName": "UpdatedName"
+}
+```
+
+**Response:**
+- `201` — `"user updated successfully"`
+- `400 Bad Request` — `"failed to update: <error>"`
+
+```js
+// Example usage
+fetch('http://localhost:5555/user', {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ userId: '64abc123def456', firstName: 'UpdatedName' })
+});
+```
+
+---
+
 
 ## 👤 User Model
 

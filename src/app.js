@@ -6,6 +6,7 @@ const PORT = 5555;
 
 app.use(express.json())
 
+//.  post
 app.post("/signup", async (req, res) => {
   // console.log(req.body);
   const { emailId, ...rest } = req.body;
@@ -23,6 +24,7 @@ app.post("/signup", async (req, res) => {
 
 })
 
+//.  get
 app.get("/user", async (req, res) => {
   const useremail = req.body.emailId
   try {
@@ -47,6 +49,7 @@ app.get("/feed", async (req, res) => {
   }
 })
 
+//.  delete
 app.delete("/user", async (req, res) => {
   const userId = req.body.userId
   try {
@@ -58,7 +61,17 @@ app.delete("/user", async (req, res) => {
   }
 })
 
-
+//.  patch
+app.patch("/user",async(req,res)=>{
+  const data = req.body;
+  const userId = req.body.userId;
+  try {
+    const user = await User.findByIdAndUpdate(userId,data)
+    res.status(201).send("user updated successfully")
+  } catch (error) {
+    res.status(400).send("failed to update:",error)
+  }
+})
 
 connectDB().then(() => {
   console.log("Database connected successfully");
