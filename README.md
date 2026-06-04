@@ -86,9 +86,20 @@ newBKAbhay/
 
 ### `POST /signup`
 
-Creates a new user and saves it to the database.
+Creates a new user from the JSON request body and saves it to the database.
 
-**Request:** No body required (currently uses hardcoded user data).
+The server uses `express.json()` middleware to parse incoming JSON payloads.
+
+**Request Body (JSON):**
+
+```json
+{
+  "firstName": "John",
+  "lastName": "Doe",
+  "emailId": "john@example.com",
+  "password": "yourpassword"
+}
+```
 
 **Response:**
 - `201 Created` — `"user created Successfully"`
@@ -96,7 +107,16 @@ Creates a new user and saves it to the database.
 
 ```js
 // Example usage
-fetch('http://localhost:5555/signup', { method: 'POST' });
+fetch('http://localhost:5555/signup', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    firstName: 'John',
+    lastName: 'Doe',
+    emailId: 'john@example.com',
+    password: 'yourpassword'
+  })
+});
 ```
 
 ---
