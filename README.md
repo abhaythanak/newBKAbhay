@@ -165,6 +165,34 @@ fetch('http://localhost:5555/feed');
 
 ---
 
+### `DELETE /user`
+
+Deletes a user from the database by `userId` from the request body.
+
+**Request Body (JSON):**
+
+```json
+{
+  "userId": "64abc123def456"
+}
+```
+
+**Response:**
+- `201` — `"UserDeleted Successfully"`
+- `400 Bad Request` — `"Deletion Failed: <error>"`
+
+```js
+// Example usage
+fetch('http://localhost:5555/user', {
+  method: 'DELETE',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ userId: '64abc123def456' })
+});
+```
+
+---
+
+
 ## 👤 User Model
 
 `src/models/user.js` defines the Mongoose schema for a user document.
