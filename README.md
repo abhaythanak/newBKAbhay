@@ -1,6 +1,6 @@
 # newBKAbhay
 
-A **Node.js + Express 5** backend server connected to a **MongoDB** database via Mongoose.
+A **Node.js + Express 5** backend server connected to a **MongoDB** database via Mongoose, with user signup functionality.
 
 ---
 
@@ -68,15 +68,42 @@ The server will start on **http://localhost:5555**
 ```
 newBKAbhay/
 ├── src/
-│   ├── app.js              # Express app entry point — connects DB, starts server
+│   ├── app.js              # Express app entry point — connects DB, defines routes, starts server
 │   ├── auth.js             # Auth middleware (token-based authentication)
-│   └── config/
-│       └── database.js     # Mongoose connection setup
+│   ├── config/
+│   │   └── database.js     # Mongoose connection setup
+│   └── models/
+│       └── user.js         # Mongoose User model/schema
 ├── .env                    # Environment variables (not committed)
 ├── .gitignore              # Git ignored files
 ├── package.json            # Project metadata & scripts
 └── README.md               # Project documentation
 ```
+
+---
+
+## 🔗 API Routes
+
+### `POST /signup`
+
+Creates a new user and saves it to the database.
+
+**Request:** No body required (currently uses hardcoded user data).
+
+**Response:**
+- `201 Created` — `"user created Successfully"`
+- `400 Bad Request` — `"error saving the user: <error message>"`
+
+```js
+// Example usage
+fetch('http://localhost:5555/signup', { method: 'POST' });
+```
+
+---
+
+## 👤 User Model
+
+`src/models/user.js` defines the Mongoose schema for a user document.
 
 ---
 
@@ -134,7 +161,7 @@ git push -u origin main
 ## 📦 Dependencies
 
 | Package    | Version   | Purpose                     |
-|------------|-----------|-----------------------------|
+|------------|-----------|------------------------------|
 | `express`  | `^5.2.1`  | HTTP server framework        |
 | `mongoose` | `^9.6.3`  | MongoDB ODM                  |
 | `nodemon`  | `^3.1.14` | Auto-reload on file changes  |
