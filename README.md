@@ -86,7 +86,9 @@ newBKAbhay/
 
 ### `POST /signup`
 
-Creates a new user from the JSON request body and saves it to the database. Checks for duplicate `emailId` before creating.
+Creates a new user from the JSON request body and saves it to the database.
+
+> ⚠️ The duplicate `emailId` guard is currently **commented out** in `app.js`. The `emailId` field is marked `unique` in the schema, so MongoDB will still reject duplicates with a `500` error.
 
 The server uses `express.json()` middleware to parse incoming JSON payloads.
 
@@ -97,13 +99,19 @@ The server uses `express.json()` middleware to parse incoming JSON payloads.
   "firstName": "John",
   "lastName": "Doe",
   "emailId": "john@example.com",
-  "password": "yourpassword"
+  "password": "yourpassword",
+  "age": "25",
+  "gender": "male",
+  "photoUrl": "https://example.com/photo.jpg",
+  "about": "A short bio",
+  "skills": ["JavaScript", "Node.js"]
 }
 ```
 
+> Only `firstName`, `emailId`, and `password` are required. All other fields are optional.
+
 **Response:**
 - `201 Created` — `{ "message": "User created successfully", "user": { ... } }`
-- `400 Bad Request` — `"Email Id already present."` (duplicate email)
 - `500 Internal Server Error` — `{ "message": "Error saving user", "error": "..." }`
 
 ```js
@@ -119,7 +127,6 @@ fetch('http://localhost:5555/signup', {
   })
 });
 ```
-
 
 ---
 
@@ -194,14 +201,15 @@ fetch('http://localhost:5555/user', {
 
 ### `PATCH /user`
 
-Updates an existing user's data by `userId`. Pass any fields to update along with the `userId`.
+Updates an existing user's data by `userId`. Pass any fields to update along with the `userId`. Validators are run on update.
 
 **Request Body (JSON):**
 
 ```json
 {
   "userId": "64abc123def456",
-  "firstName": "UpdatedName"
+  "firstName": "UpdatedName",
+  "skills": ["React", "MongoDB"]
 }
 ```
 
@@ -220,16 +228,29 @@ fetch('http://localhost:5555/user', {
 
 ---
 
-
 ## 👤 User Model
 
 `src/models/user.js` defines the Mongoose schema for a user document.
+
+| Field       | Type       | Required | Constraints / Default                                    |
+|-------------|------------|----------|----------------------------------------------------------|
+| `firstName` | `String`   | ✅ Yes   | `minLength: 3`, `maxLength: 50`                          |
+| `lastName`  | `String`   | ❌ No    | —                                                        |
+| `emailId`   | `String`   | ✅ Yes   | `unique`, `lowercase`, `trim`                            |
+| `password`  | `String`   | ✅ Yes   | —                                                        |
+| `age`       | `String`   | ❌ No    | `min: 18`                                                |
+| `gender`    | `String`   | ❌ No    | Must be `"male"`, `"female"`, or `"others"`              |
+| `photoUrl`  | `String`   | ❌ No    | Default: brain image URL                                 |
+| `about`     | `String`   | ❌ No    | Default: `"this is the default about the user"`          |
+| `skills`    | `[String]` | ❌ No    | Array of skill strings                                   |
 
 ---
 
 ## 🔐 Authentication Middleware
 
 `src/auth.js` exports a `userAuth` middleware that validates a token before allowing access to protected routes.
+
+> ⚠️ Currently uses a **hardcoded token** (`'xyz'`). This is a placeholder — replace with JWT or session-based auth before going to production.
 
 ```js
 const { userAuth } = require('./auth');

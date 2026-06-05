@@ -12,9 +12,9 @@ app.post("/signup", async (req, res) => {
   const { emailId, ...rest } = req.body;
   try {
     const existingUser = await User.findOne({ emailId });
-    if (existingUser) {
-      return res.status(400).send("Email Id already present.")
-    }
+    // if (existingUser) {
+    //   return res.status(400).send("Email Id already present.")
+    // }
     const user = new User({ emailId, ...rest })
     await user.save()
     res.status(201).json({ message: "User created successfully", user });
@@ -66,10 +66,10 @@ app.patch("/user",async(req,res)=>{
   const data = req.body;
   const userId = req.body.userId;
   try {
-    const user = await User.findByIdAndUpdate(userId,data)
+    const user = await User.findByIdAndUpdate(userId,data,{ returnDocument:"after",runValidators: true})
     res.status(201).send("user updated successfully")
   } catch (error) {
-    res.status(400).send("failed to update:",error)
+    res.status(400).send("failed to update:"+ error.message)
   }
 })
 
