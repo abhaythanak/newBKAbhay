@@ -139,6 +139,43 @@ fetch('http://localhost:5555/signup', {
 
 ---
 
+### `POST /login`
+
+Authenticates an existing user by verifying their email and password.
+
+**Login flow:**
+1. Look up the user by `emailId` — throw `"Invalid Credential"` if not found.
+2. Compare the submitted password against the stored **bcrypt hash** using `bcrypt.compare`.
+3. Return the user's public profile on success (`firstName`, `lastName`, `emailId`).
+
+**Request Body (JSON):**
+
+```json
+{
+  "emailId": "john@example.com",
+  "password": "StrongPass@123"
+}
+```
+
+**Response:**
+- `200 OK` — `{ "message": "Login successful", "user": { "firstName", "lastName", "emailId" } }`
+- `401 Unauthorized` — `{ "message": "Invalid email or password" }`
+- `400 Bad Request` — `{ "message": "Error saving user", "error": "..." }` (e.g. user not found)
+
+```js
+// Example usage
+fetch('http://localhost:5555/login', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    emailId: 'john@example.com',
+    password: 'StrongPass@123'
+  })
+});
+```
+
+---
+
 ### `GET /user`
 
 Fetches a single user by `emailId` from the request body.
