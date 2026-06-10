@@ -2,6 +2,8 @@ const express = require("express");
 const connectDB = require("./config/database")
 const app = express();
 const User = require("./models/user")
+const { validateSignupData } = require("./utils/validation")
+const bcrypt = require("bcrypt")
 const PORT = 5555;
 
 app.use(express.json())
@@ -9,13 +11,20 @@ app.use(express.json())
 //.  post
 app.post("/signup", async (req, res) => {
   // console.log(req.body);
-  const { emailId, ...rest } = req.body;
+  const { emailId,password, ...rest } = req.body;
   try {
+    // validate of data
+    validateSignupData(req)
+    // encrypt Password
+
+    const passwordHash =await bcrypt.hash(password,10)
+    console.log(passwordHash)
+
     const existingUser = await User.findOne({ emailId });
     // if (existingUser) {
     //   return res.status(400).send("Email Id already present.")
     // }
-    const user = new User({ emailId, ...rest })
+    const user = new User({ emailId,password:passwordHash, ...rest })
     await user.save()
     res.status(201).json({ message: "User created successfully", user });
   } catch (error) {
@@ -62,14 +71,14 @@ app.delete("/user", async (req, res) => {
 })
 
 //.  patch
-app.patch("/user",async(req,res)=>{
+app.patch("/user", async (req, res) => {
   const data = req.body;
   const userId = req.body.userId;
   try {
-    const user = await User.findByIdAndUpdate(userId,data,{ returnDocument:"after",runValidators: true})
+    const user = await User.findByIdAndUpdate(userId, data, { returnDocument: "after", runValidators: true })
     res.status(201).send("user updated successfully")
   } catch (error) {
-    res.status(400).send("failed to update:"+ error.message)
+    res.status(400).send("failed to update:" + error.message)
   }
 })
 
