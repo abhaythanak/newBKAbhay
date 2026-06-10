@@ -1,6 +1,6 @@
 # newBKAbhay
 
-A **Node.js + Express 5** backend server connected to a **MongoDB** database via Mongoose, with user signup functionality.
+A **Node.js + Express 5** backend server connected to a **MongoDB** database via Mongoose, with user signup, authentication middleware, and CRUD functionality for user management.
 
 ---
 
@@ -41,6 +41,8 @@ MONGO_URI=your_mongodb_connection_string
 
 > ⚠️ Never commit your `.env` file. It is already included in `.gitignore`.
 
+> ⚠️ **Note:** The current `src/config/database.js` has the MongoDB URI **hardcoded** in the source. Move it to `.env` and use `process.env.MONGO_URI` before going to production.
+
 ---
 
 ## ▶️ Running the Server
@@ -69,11 +71,11 @@ The server will start on **http://localhost:5555**
 newBKAbhay/
 ├── src/
 │   ├── app.js              # Express app entry point — connects DB, defines routes, starts server
-│   ├── auth.js             # Auth middleware (token-based authentication)
+│   ├── auth.js             # Auth middleware (placeholder token-based authentication)
 │   ├── config/
 │   │   └── database.js     # Mongoose connection setup
 │   └── models/
-│       └── user.js         # Mongoose User model/schema
+│       └── user.js         # Mongoose User model/schema (uses validator library)
 ├── .env                    # Environment variables (not committed)
 ├── .gitignore              # Git ignored files
 ├── package.json            # Project metadata & scripts
@@ -86,9 +88,11 @@ newBKAbhay/
 
 ### `POST /signup`
 
-Creates a new user from the JSON request body and saves it to the database. Checks for duplicate `emailId` before creating.
+Creates a new user from the JSON request body and saves it to the database.
 
-The server uses `express.json()` middleware to parse incoming JSON payloads.
+> ⚠️ The duplicate `emailId` check is currently **commented out** in `app.js` (an `existingUser` lookup is done but the guard block is disabled). The `emailId` field is marked `unique` in the schema, so MongoDB will still reject duplicates with a `500` error.
+
+> ⚠️ **Password validation** is enforced via the `validator` library's `isStrongPassword`. Weak passwords will be rejected with a validation error.
 
 **Request Body (JSON):**
 
@@ -97,13 +101,19 @@ The server uses `express.json()` middleware to parse incoming JSON payloads.
   "firstName": "John",
   "lastName": "Doe",
   "emailId": "john@example.com",
-  "password": "yourpassword"
+  "password": "StrongPass@123",
+  "age": "25",
+  "gender": "male",
+  "photoUrl": "https://example.com/photo.jpg",
+  "about": "A short bio",
+  "skills": ["JavaScript", "Node.js"]
 }
 ```
 
+> Only `firstName`, `emailId`, and `password` are required. All other fields are optional.
+
 **Response:**
 - `201 Created` — `{ "message": "User created successfully", "user": { ... } }`
-- `400 Bad Request` — `"Email Id already present."` (duplicate email)
 - `500 Internal Server Error` — `{ "message": "Error saving user", "error": "..." }`
 
 ```js
@@ -115,11 +125,10 @@ fetch('http://localhost:5555/signup', {
     firstName: 'John',
     lastName: 'Doe',
     emailId: 'john@example.com',
-    password: 'yourpassword'
+    password: 'StrongPass@123'
   })
 });
 ```
-
 
 ---
 
@@ -156,7 +165,7 @@ Fetches **all users** from the database. No request body required.
 
 **Response:**
 - `200 OK` — Array of all user objects
-- `404 Not Found` — `"error saving the user: <error message>"`
+- `404 Not Found` — Error message string
 
 ```js
 // Example usage
@@ -192,16 +201,60 @@ fetch('http://localhost:5555/user', {
 
 ---
 
+### `PATCH /user`
+
+Updates an existing user's data by `userId`. Pass any fields to update along with the `userId`. Validators are run on update (`runValidators: true`).
+
+**Request Body (JSON):**
+
+```json
+{
+  "userId": "64abc123def456",
+  "firstName": "UpdatedName",
+  "skills": ["React", "MongoDB"]
+}
+```
+
+**Response:**
+- `201` — `"user updated successfully"`
+- `400 Bad Request` — `"failed to update: <error>"`
+
+```js
+// Example usage
+fetch('http://localhost:5555/user', {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ userId: '64abc123def456', firstName: 'UpdatedName' })
+});
+```
+
+---
 
 ## 👤 User Model
 
-`src/models/user.js` defines the Mongoose schema for a user document.
+`src/models/user.js` defines the Mongoose schema for a user document. The schema includes `timestamps: true`, so each document automatically gets `createdAt` and `updatedAt` fields.
+
+| Field       | Type       | Required | Constraints / Default                                                       |
+|-------------|------------|----------|-----------------------------------------------------------------------------|
+| `firstName` | `String`   | ✅ Yes   | `minLength: 3`, `maxLength: 50`                                             |
+| `lastName`  | `String`   | ❌ No    | —                                                                           |
+| `emailId`   | `String`   | ✅ Yes   | `unique`, `lowercase`, `trim`                                               |
+| `password`  | `String`   | ✅ Yes   | Must pass `validator.isStrongPassword()` check                              |
+| `age`       | `String`   | ❌ No    | `min: 18` *(note: stored as String, min applies to numeric comparison)*     |
+| `gender`    | `String`   | ❌ No    | Must be `"male"`, `"female"`, or `"others"`                                 |
+| `photoUrl`  | `String`   | ❌ No    | Default: brain image URL                                                    |
+| `about`     | `String`   | ❌ No    | Default: `"this is the default about the user"`                             |
+| `skills`    | `[String]` | ❌ No    | Array of skill strings                                                      |
+| `createdAt` | `Date`     | auto     | Auto-generated by Mongoose timestamps                                       |
+| `updatedAt` | `Date`     | auto     | Auto-generated by Mongoose timestamps                                       |
 
 ---
 
 ## 🔐 Authentication Middleware
 
 `src/auth.js` exports a `userAuth` middleware that validates a token before allowing access to protected routes.
+
+> ⚠️ Currently uses a **hardcoded token** (`'xyz'`). This is a placeholder — replace with JWT or session-based auth before going to production.
 
 ```js
 const { userAuth } = require('./auth');
@@ -225,6 +278,8 @@ connectDB()
   })
   .catch(err => console.error('Database connection failed:', err));
 ```
+
+> ⚠️ The MongoDB URI is currently **hardcoded** in `database.js`. Move it to an environment variable (`process.env.MONGO_URI`) before deploying.
 
 ---
 
@@ -252,11 +307,12 @@ git push -u origin main
 
 ## 📦 Dependencies
 
-| Package    | Version   | Purpose                     |
-|------------|-----------|------------------------------|
-| `express`  | `^5.2.1`  | HTTP server framework        |
-| `mongoose` | `^9.6.3`  | MongoDB ODM                  |
-| `nodemon`  | `^3.1.14` | Auto-reload on file changes  |
+| Package     | Version    | Purpose                                         |
+|-------------|------------|-------------------------------------------------|
+| `express`   | `^5.2.1`   | HTTP server framework                           |
+| `mongoose`  | `^9.6.3`   | MongoDB ODM                                     |
+| `validator` | `^13.15.35`| String validation (email, password strength...) |
+| `nodemon`   | `^3.1.14`  | Auto-reload on file changes (devDependency)     |
 
 ---
 
