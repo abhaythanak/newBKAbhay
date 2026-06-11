@@ -1,6 +1,6 @@
 # newBKAbhay
 
-A **Node.js + Express 5** backend server connected to a **MongoDB** database via Mongoose, featuring user signup with **input validation**, **bcrypt password hashing**, authentication middleware, and full CRUD functionality for user management.
+A **Node.js + Express 5** backend server connected to a **MongoDB** database via Mongoose, featuring user signup with **input validation**, **bcrypt password hashing**, **cookie-based authentication**, and full CRUD functionality for user management.
 
 ---
 
@@ -84,6 +84,8 @@ newBKAbhay/
 └── README.md               # Project documentation
 ```
 
+> Middlewares used: `express.json()` for JSON body parsing and `cookie-parser` for reading/writing HTTP cookies.
+
 ---
 
 ## 🔗 API Routes
@@ -97,7 +99,7 @@ Creates a new user from the JSON request body and saves it to the database.
 2. **Hash password** — The plaintext password is hashed with `bcrypt` (10 salt rounds) before being stored.
 3. **Save user** — A new `User` document is created with the hashed password and saved to MongoDB.
 
-> ⚠️ The duplicate `emailId` check is currently **commented out** in `app.js` (an `existingUser` lookup is done but the guard block is disabled). The `emailId` field is marked `unique` in the schema, so MongoDB will still reject duplicates with a `500` error.
+> ⚠️ The duplicate `emailId` check is currently **commented out** in `app.js` — an `existingUser` lookup is performed but the guard block is disabled. The `emailId` field is marked `unique` in the Mongoose schema, so MongoDB will still reject duplicates with a `500` error. Uncomment the guard block to return a clean `400` response instead.
 
 > ⚠️ **Password strength** is validated by `validator.isStrongPassword()` in `validateSignupData` before hashing. Weak passwords throw an error immediately.
 
@@ -146,7 +148,7 @@ Authenticates an existing user by verifying their email and password.
 **Login flow:**
 1. Look up the user by `emailId` — throw `"Invalid Credential"` if not found.
 2. Compare the submitted password against the stored **bcrypt hash** using `bcrypt.compare`.
-3. Return the user's public profile on success (`firstName`, `lastName`, `emailId`).
+3. On success, set a `token` cookie on the response and return the user's public profile (`firstName`, `lastName`, `emailId`).
 
 **Request Body (JSON):**
 
@@ -158,9 +160,11 @@ Authenticates an existing user by verifying their email and password.
 ```
 
 **Response:**
-- `200 OK` — `{ "message": "Login successful", "user": { "firstName", "lastName", "emailId" } }`
+- `200 OK` — Sets `token` cookie; returns `{ "message": "Login successful", "user": { "firstName", "lastName", "emailId" } }`
 - `401 Unauthorized` — `{ "message": "Invalid email or password" }`
 - `400 Bad Request` — `{ "message": "Error saving user", "error": "..." }` (e.g. user not found)
+
+> ⚠️ The `token` cookie value is currently **hardcoded** as a static string. Replace with a proper **JWT** (`jsonwebtoken`) before going to production.
 
 ```js
 // Example usage
@@ -242,6 +246,27 @@ fetch('http://localhost:5555/user', {
   body: JSON.stringify({ userId: '64abc123def456' })
 });
 ```
+
+---
+
+### `GET /profile`
+
+Reads the `token` cookie from the request and validates it. This is a placeholder for protected profile access.
+
+**Auth:** Requires the `token` cookie to be present (set during `/login`).
+
+**Response:**
+- `200 OK` — `"reading cookies"`
+- `400 Bad Request` — `{ "message": "Error saving user", "error": "token expired" }` (if no cookie found)
+
+```js
+// Example usage (cookie sent automatically by browser)
+fetch('http://localhost:5555/profile', {
+  credentials: 'include'
+});
+```
+
+> ⚠️ This route currently only checks for the **presence** of the `token` cookie. It does not validate the token's contents or signature. Integrate JWT verification here before using in production.
 
 ---
 
@@ -374,13 +399,14 @@ git push -u origin main
 
 ## 📦 Dependencies
 
-| Package     | Version    | Purpose                                         |
-|-------------|------------|-------------------------------------------------|
-| `express`   | `^5.2.1`   | HTTP server framework                           |
-| `mongoose`  | `^9.6.3`   | MongoDB ODM                                     |
-| `bcrypt`    | `^5.x`     | Password hashing (10 salt rounds)               |
-| `validator` | `^13.15.35`| String validation (email, password strength...) |
-| `nodemon`   | `^3.1.14`  | Auto-reload on file changes (devDependency)     |
+| Package        | Version     | Purpose                                          |
+|----------------|-------------|--------------------------------------------------|
+| `express`      | `^5.2.1`    | HTTP server framework                            |
+| `mongoose`     | `^9.6.3`    | MongoDB ODM                                      |
+| `bcrypt`       | `^5.x`      | Password hashing (10 salt rounds)                |
+| `validator`    | `^13.15.35` | String validation (email, password strength...)  |
+| `cookie-parser`| `^1.x`      | Parse and set HTTP cookies                       |
+| `nodemon`      | `^3.1.14`   | Auto-reload on file changes (devDependency)      |
 
 ---
 

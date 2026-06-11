@@ -4,9 +4,11 @@ const app = express();
 const User = require("./models/user")
 const { validateSignupData } = require("./utils/validation")
 const bcrypt = require("bcrypt")
+const cookieParser = require("cookie-parser")
 const PORT = 5555;
 
 app.use(express.json())
+app.use(cookieParser())
 
 //.  post
 app.post("/signup", async (req, res) => {
@@ -42,6 +44,12 @@ app.post("/login", async (req, res) => {
     }
     //  encrypt password check
     const isPasswordValid = await bcrypt.compare(password, user.password)
+    if (isPasswordValid) {
+      // create jwt token
+
+      // Add the token to cookie and send to user 
+      res.cookie("token", "shjdbfhksi7fgiw3u4hgrfkfhu4eft@$t24guotl$T$tgfuuwuyf")
+    }
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
@@ -83,6 +91,21 @@ app.get("/feed", async (req, res) => {
   } catch (error) {
     res.status(404).send("error saving the user:" + err.message)
   }
+})
+
+//. profile. 
+app.get("/profile", async (req, res) => {
+  try {
+      const cookies = req.cookies
+   const {token} = cookies
+   if(!token){
+    throw new Error("token expired")
+   }
+  res.send("reading cookies")
+  } catch (error) {
+    res.status(400).json({ message: "Error saving user", error: error.message });
+  }
+
 })
 
 //.  delete
