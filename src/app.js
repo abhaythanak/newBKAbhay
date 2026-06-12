@@ -5,6 +5,7 @@ const User = require("./models/user")
 const { validateSignupData } = require("./utils/validation")
 const bcrypt = require("bcrypt")
 const cookieParser = require("cookie-parser")
+const jwt = require("jsonwebtoken")
 const PORT = 5555;
 
 app.use(express.json())
@@ -46,9 +47,11 @@ app.post("/login", async (req, res) => {
     const isPasswordValid = await bcrypt.compare(password, user.password)
     if (isPasswordValid) {
       // create jwt token
-
+      const token = await jwt.sign({ _id: user._id }, "Abhay@123")
+      console.log(token)
       // Add the token to cookie and send to user 
-      res.cookie("token", "shjdbfhksi7fgiw3u4hgrfkfhu4eft@$t24guotl$T$tgfuuwuyf")
+      // res.cookie("token", "shjdbfhksi7fgiw3u4hgrfkfhu4eft@$t24guotl$T$tgfuuwuyf")
+      res.cookie("token", token)
     }
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Invalid email or password" });
@@ -96,12 +99,15 @@ app.get("/feed", async (req, res) => {
 //. profile. 
 app.get("/profile", async (req, res) => {
   try {
-      const cookies = req.cookies
-   const {token} = cookies
-   if(!token){
-    throw new Error("token expired")
-   }
-  res.send("reading cookies")
+    const cookies = req.cookies
+    const { token } = cookies
+    const isTokenValid = await jwt.verify(token, "Abhay@123")
+    if (!isTokenValid) {
+      throw new Error("token expired")
+    }
+    const { _id } = isTokenValid
+    const user = await User.findById(_id)
+    res.send(user)
   } catch (error) {
     res.status(400).json({ message: "Error saving user", error: error.message });
   }

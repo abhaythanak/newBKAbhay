@@ -1,6 +1,6 @@
 # newBKAbhay
 
-A **Node.js + Express 5** backend server connected to a **MongoDB** database via Mongoose, featuring user signup with **input validation**, **bcrypt password hashing**, **cookie-based authentication**, and full CRUD functionality for user management.
+A **Node.js + Express 5** backend server connected to a **MongoDB** database via Mongoose, featuring user signup with **input validation**, **bcrypt password hashing**, **JWT-based cookie authentication**, and full CRUD functionality for user management.
 
 ---
 
@@ -71,7 +71,7 @@ The server will start on **http://localhost:5555**
 newBKAbhay/
 ├── src/
 │   ├── app.js              # Express app entry point — connects DB, defines routes, starts server
-│   ├── auth.js             # Auth middleware (placeholder token-based authentication)
+│   ├── auth.js             # Auth middleware (placeholder hardcoded token — see ⚠️ note)
 │   ├── config/
 │   │   └── database.js     # Mongoose connection setup
 │   ├── models/
@@ -148,7 +148,7 @@ Authenticates an existing user by verifying their email and password.
 **Login flow:**
 1. Look up the user by `emailId` — throw `"Invalid Credential"` if not found.
 2. Compare the submitted password against the stored **bcrypt hash** using `bcrypt.compare`.
-3. On success, set a `token` cookie on the response and return the user's public profile (`firstName`, `lastName`, `emailId`).
+3. On success, sign a **JWT** token (`jsonwebtoken`) with the user's `_id` and set it as a `token` cookie on the response.
 
 **Request Body (JSON):**
 
@@ -160,11 +160,11 @@ Authenticates an existing user by verifying their email and password.
 ```
 
 **Response:**
-- `200 OK` — Sets `token` cookie; returns `{ "message": "Login successful", "user": { "firstName", "lastName", "emailId" } }`
+- `200 OK` — Sets `token` JWT cookie; returns `{ "message": "Login successful", "user": { "firstName", "lastName", "emailId" } }`
 - `401 Unauthorized` — `{ "message": "Invalid email or password" }`
 - `400 Bad Request` — `{ "message": "Error saving user", "error": "..." }` (e.g. user not found)
 
-> ⚠️ The `token` cookie value is currently **hardcoded** as a static string. Replace with a proper **JWT** (`jsonwebtoken`) before going to production.
+> ⚠️ The JWT is currently signed with a **hardcoded secret** (`"Abhay@123"`). Move this secret to an environment variable (`process.env.JWT_SECRET`) before going to production.
 
 ```js
 // Example usage
@@ -251,13 +251,19 @@ fetch('http://localhost:5555/user', {
 
 ### `GET /profile`
 
-Reads the `token` cookie from the request and validates it. This is a placeholder for protected profile access.
+Reads the `token` cookie from the request, **verifies it as a JWT**, and returns the authenticated user's full profile from the database.
 
-**Auth:** Requires the `token` cookie to be present (set during `/login`).
+**Auth:** Requires the `token` JWT cookie to be present and valid (set during `/login`).
+
+**Profile flow:**
+1. Read the `token` cookie from the request.
+2. Verify the JWT using `jwt.verify(token, "Abhay@123")` — throws if expired or invalid.
+3. Extract the `_id` from the decoded payload and look up the user in MongoDB.
+4. Return the user document.
 
 **Response:**
-- `200 OK` — `"reading cookies"`
-- `400 Bad Request` — `{ "message": "Error saving user", "error": "token expired" }` (if no cookie found)
+- `200 OK` — The authenticated user's document
+- `400 Bad Request` — `{ "message": "Error saving user", "error": "..." }` (e.g. invalid/expired token or cookie missing)
 
 ```js
 // Example usage (cookie sent automatically by browser)
@@ -266,7 +272,7 @@ fetch('http://localhost:5555/profile', {
 });
 ```
 
-> ⚠️ This route currently only checks for the **presence** of the `token` cookie. It does not validate the token's contents or signature. Integrate JWT verification here before using in production.
+> ⚠️ The JWT secret is currently **hardcoded** as `"Abhay@123"`. Move it to `process.env.JWT_SECRET` before deploying to production.
 
 ---
 
@@ -342,16 +348,27 @@ validateSignupData(req); // throws on invalid input
 
 ---
 
-## 🔐 Authentication Middleware
+## 🔐 Authentication
 
-`src/auth.js` exports a `userAuth` middleware that validates a token before allowing access to protected routes.
+### JWT Auth (active in routes)
 
-> ⚠️ Currently uses a **hardcoded token** (`'xyz'`). This is a placeholder — replace with JWT or session-based auth before going to production.
+`app.js` uses `jsonwebtoken` directly in the `/login` and `/profile` routes:
+
+- **`/login`** — Signs a JWT with `{ _id: user._id }` and sets it as the `token` cookie.
+- **`/profile`** — Verifies the `token` cookie JWT, extracts `_id`, and returns the user from MongoDB.
+
+> ⚠️ The JWT secret is currently **hardcoded** as `"Abhay@123"`. Move it to an environment variable (`process.env.JWT_SECRET`) before going to production.
+
+### `userAuth` Middleware (placeholder — `src/auth.js`)
+
+`src/auth.js` exports a `userAuth` middleware, but it currently uses a **hardcoded token** (`'xyz'`) and does not validate JWTs. It is not wired to any route yet.
+
+> ⚠️ Replace `auth.js` with proper JWT verification using `jwt.verify(token, process.env.JWT_SECRET)` before using it to protect routes in production.
 
 ```js
 const { userAuth } = require('./auth');
 
-// Usage on a protected route
+// Usage on a protected route (once auth.js is updated)
 app.get('/protected', userAuth, (req, res) => {
   res.send('Authenticated!');
 });
@@ -399,14 +416,15 @@ git push -u origin main
 
 ## 📦 Dependencies
 
-| Package        | Version     | Purpose                                          |
-|----------------|-------------|--------------------------------------------------|
-| `express`      | `^5.2.1`    | HTTP server framework                            |
-| `mongoose`     | `^9.6.3`    | MongoDB ODM                                      |
-| `bcrypt`       | `^5.x`      | Password hashing (10 salt rounds)                |
-| `validator`    | `^13.15.35` | String validation (email, password strength...)  |
-| `cookie-parser`| `^1.x`      | Parse and set HTTP cookies                       |
-| `nodemon`      | `^3.1.14`   | Auto-reload on file changes (devDependency)      |
+| Package         | Version     | Purpose                                          |
+|-----------------|-------------|--------------------------------------------------|
+| `express`       | `^5.2.1`    | HTTP server framework                            |
+| `mongoose`      | `^9.6.3`    | MongoDB ODM                                      |
+| `bcrypt`        | `^6.0.0`    | Password hashing (10 salt rounds)                |
+| `jsonwebtoken`  | `^9.0.3`    | JWT signing and verification for auth            |
+| `validator`     | `^13.15.35` | String validation (email, password strength...)  |
+| `cookie-parser` | `^1.4.7`    | Parse and set HTTP cookies                       |
+| `nodemon`       | `^3.1.14`   | Auto-reload on file changes (devDependency)      |
 
 ---
 
