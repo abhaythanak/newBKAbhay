@@ -70,18 +70,20 @@ The server will start on **http://localhost:5555**
 ```
 newBKAbhay/
 ├── src/
-│   ├── app.js              # Express app entry point — connects DB, defines routes, starts server
-│   ├── auth.js             # Auth middleware (placeholder hardcoded token — see ⚠️ note)
+│   ├── app.js                  # Express app entry point — connects DB, defines routes, starts server
+│   ├── auth.js                 # Old auth placeholder (hardcoded token — superseded by middlewares/auth.js)
 │   ├── config/
-│   │   └── database.js     # Mongoose connection setup
+│   │   └── database.js         # Mongoose connection setup
+│   ├── middlewares/
+│   │   └── auth.js             # JWT auth middleware — verifies token cookie, attaches user to req.user
 │   ├── models/
-│   │   └── user.js         # Mongoose User model/schema (uses validator library)
+│   │   └── user.js             # Mongoose User model/schema (uses validator library)
 │   └── utils/
-│       └── validation.js   # Input validation helpers (validateSignupData)
-├── .env                    # Environment variables (not committed)
-├── .gitignore              # Git ignored files
-├── package.json            # Project metadata & scripts
-└── README.md               # Project documentation
+│       └── validation.js       # Input validation helpers (validateSignupData)
+├── .env                        # Environment variables (not committed)
+├── .gitignore                  # Git ignored files
+├── package.json                # Project metadata & scripts
+└── README.md                   # Project documentation
 ```
 
 > Middlewares used: `express.json()` for JSON body parsing and `cookie-parser` for reading/writing HTTP cookies.
@@ -251,28 +253,27 @@ fetch('http://localhost:5555/user', {
 
 ### `GET /profile`
 
-Reads the `token` cookie from the request, **verifies it as a JWT**, and returns the authenticated user's full profile from the database.
+A **protected route** — returns the authenticated user's full profile from the database.
 
-**Auth:** Requires the `token` JWT cookie to be present and valid (set during `/login`).
+**Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.js`). Requires a valid `token` JWT cookie (set during `/login`).
 
 **Profile flow:**
-1. Read the `token` cookie from the request.
-2. Verify the JWT using `jwt.verify(token, "Abhay@123")` — throws if expired or invalid.
-3. Extract the `_id` from the decoded payload and look up the user in MongoDB.
-4. Return the user document.
+1. `userAuth` middleware reads the `token` cookie and verifies the JWT.
+2. Middleware looks up the user by `_id` from the decoded token and attaches it to `req.user`.
+3. The route handler reads `req.user` and sends the user document back.
 
 **Response:**
 - `200 OK` — The authenticated user's document
-- `400 Bad Request` — `{ "message": "Error saving user", "error": "..." }` (e.g. invalid/expired token or cookie missing)
+- `400 Bad Request` — `"Error: token is not valid!!...."` (missing/invalid cookie) or `"Error: User not found"`
 
 ```js
-// Example usage (cookie sent automatically by browser)
+// Example usage (cookie sent automatically by browser after login)
 fetch('http://localhost:5555/profile', {
   credentials: 'include'
 });
 ```
 
-> ⚠️ The JWT secret is currently **hardcoded** as `"Abhay@123"`. Move it to `process.env.JWT_SECRET` before deploying to production.
+> ⚠️ The JWT secret is currently **hardcoded** as `"Abhay@123"` in `middlewares/auth.js`. Move it to `process.env.JWT_SECRET` before deploying to production.
 
 ---
 
@@ -350,29 +351,43 @@ validateSignupData(req); // throws on invalid input
 
 ## 🔐 Authentication
 
-### JWT Auth (active in routes)
+### `userAuth` Middleware (`src/middlewares/auth.js`)
 
-`app.js` uses `jsonwebtoken` directly in the `/login` and `/profile` routes:
+All protected routes use the `userAuth` middleware, which handles JWT verification and user lookup in one place:
 
-- **`/login`** — Signs a JWT with `{ _id: user._id }` and sets it as the `token` cookie.
-- **`/profile`** — Verifies the `token` cookie JWT, extracts `_id`, and returns the user from MongoDB.
-
-> ⚠️ The JWT secret is currently **hardcoded** as `"Abhay@123"`. Move it to an environment variable (`process.env.JWT_SECRET`) before going to production.
-
-### `userAuth` Middleware (placeholder — `src/auth.js`)
-
-`src/auth.js` exports a `userAuth` middleware, but it currently uses a **hardcoded token** (`'xyz'`) and does not validate JWTs. It is not wired to any route yet.
-
-> ⚠️ Replace `auth.js` with proper JWT verification using `jwt.verify(token, process.env.JWT_SECRET)` before using it to protect routes in production.
+**Middleware flow:**
+1. Read the `token` cookie from the request — throw if missing.
+2. Verify the JWT with `jwt.verify(token, "Abhay@123")` — throw if invalid or expired.
+3. Extract `_id` from the decoded payload and fetch the user from MongoDB — throw if not found.
+4. Attach the user document to `req.user` and call `next()` to proceed to the route handler.
 
 ```js
-const { userAuth } = require('./auth');
+const { userAuth } = require('./middlewares/auth');
 
-// Usage on a protected route (once auth.js is updated)
-app.get('/protected', userAuth, (req, res) => {
-  res.send('Authenticated!');
+// Protect any route by adding userAuth as middleware
+app.get('/profile', userAuth, async (req, res) => {
+  const user = req.user; // user is already fetched and validated
+  res.send(user);
 });
 ```
+
+**Currently protected routes:**
+- `GET /profile` — uses `userAuth`
+
+> ⚠️ The JWT secret is currently **hardcoded** as `"Abhay@123"` in `middlewares/auth.js`. Move it to an environment variable (`process.env.JWT_SECRET`) before going to production.
+
+### JWT Signing (`/login`)
+
+`app.js` signs a JWT with `{ _id: user._id }` on successful login and sets it as the `token` cookie:
+
+```js
+const token = await jwt.sign({ _id: user._id }, "Abhay@123");
+res.cookie("token", token);
+```
+
+### Legacy placeholder (`src/auth.js`)
+
+`src/auth.js` still exists but uses a **hardcoded token** (`'xyz'`) and is **not wired to any route**. It has been superseded by `src/middlewares/auth.js`.
 
 ---
 
