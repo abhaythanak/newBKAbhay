@@ -12,6 +12,9 @@ const userAuth = async (req, res, next) => {
         const { _id } = decodedObj;
         const user = await User.findById(_id)
         // validate token
+        if(!decodedObj){
+            throw new Error("jwt is expired")
+        }
         // find the user
         if (!user) {
             throw new Error("User not found")

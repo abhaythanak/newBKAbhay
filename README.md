@@ -150,7 +150,7 @@ Authenticates an existing user by verifying their email and password.
 **Login flow:**
 1. Look up the user by `emailId` — throw `"Invalid Credential"` if not found.
 2. Compare the submitted password against the stored **bcrypt hash** using `bcrypt.compare`.
-3. On success, sign a **JWT** token (`jsonwebtoken`) with the user's `_id` and set it as a `token` cookie on the response.
+3. On success, sign a **JWT** token (`jsonwebtoken`) with the user's `_id`, set to expire in **7 days**, and set it as a `token` cookie that expires in **8 hours**.
 
 **Request Body (JSON):**
 
@@ -167,6 +167,8 @@ Authenticates an existing user by verifying their email and password.
 - `400 Bad Request` — `{ "message": "Error saving user", "error": "..." }` (e.g. user not found)
 
 > ⚠️ The JWT is currently signed with a **hardcoded secret** (`"Abhay@123"`). Move this secret to an environment variable (`process.env.JWT_SECRET`) before going to production.
+
+> ℹ️ **Token lifetime:** JWT is valid for **7 days** (`expiresIn: "7d"`). The `token` cookie itself expires after **8 hours** (`Date.now() + 8 * 3600000`) — the cookie will be cleared from the browser before the JWT itself expires.
 
 ```js
 // Example usage
@@ -356,10 +358,11 @@ validateSignupData(req); // throws on invalid input
 All protected routes use the `userAuth` middleware, which handles JWT verification and user lookup in one place:
 
 **Middleware flow:**
-1. Read the `token` cookie from the request — throw if missing.
+1. Read the `token` cookie from the request — throw `"token is not valid!!...."` if missing.
 2. Verify the JWT with `jwt.verify(token, "Abhay@123")` — throw if invalid or expired.
-3. Extract `_id` from the decoded payload and fetch the user from MongoDB — throw if not found.
-4. Attach the user document to `req.user` and call `next()` to proceed to the route handler.
+3. Check the decoded payload is truthy — throw `"jwt is expired"` if falsy.
+4. Extract `_id` from the decoded payload and fetch the user from MongoDB — throw `"User not found"` if no match.
+5. Attach the user document to `req.user` and call `next()` to proceed to the route handler.
 
 ```js
 const { userAuth } = require('./middlewares/auth');
@@ -378,11 +381,11 @@ app.get('/profile', userAuth, async (req, res) => {
 
 ### JWT Signing (`/login`)
 
-`app.js` signs a JWT with `{ _id: user._id }` on successful login and sets it as the `token` cookie:
+`app.js` signs a JWT with `{ _id: user._id }` on successful login, sets it to expire in **7 days**, and sets it as the `token` cookie expiring in **8 hours**:
 
 ```js
-const token = await jwt.sign({ _id: user._id }, "Abhay@123");
-res.cookie("token", token);
+const token = await jwt.sign({ _id: user._id }, "Abhay@123", { expiresIn: "7d" });
+res.cookie("token", token, { expires: new Date(Date.now() + 8 * 3600000) });
 ```
 
 ### Legacy placeholder (`src/auth.js`)
