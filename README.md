@@ -1,6 +1,6 @@
 # newBKAbhay
 
-A **Node.js + Express 5** backend server connected to a **MongoDB** database via Mongoose, featuring user signup with **input validation**, **bcrypt password hashing**, authentication middleware, and full CRUD functionality for user management.
+A **Node.js + Express 5** backend server connected to a **MongoDB** database via Mongoose, featuring user signup with **input validation**, **bcrypt password hashing**, **JWT-based cookie authentication**, and full CRUD functionality for user management.
 
 ---
 
@@ -37,6 +37,7 @@ Create a `.env` file in the root directory and add your MongoDB connection strin
 
 ```env
 MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=your_jwt_secret
 ```
 
 > ⚠️ Never commit your `.env` file. It is already included in `.gitignore`.
@@ -70,19 +71,23 @@ The server will start on **http://localhost:5555**
 ```
 newBKAbhay/
 ├── src/
-│   ├── app.js              # Express app entry point — connects DB, defines routes, starts server
-│   ├── auth.js             # Auth middleware (placeholder token-based authentication)
+│   ├── app.js                  # Express app entry point — connects DB, defines routes, starts server
+│   ├── auth.js                 # Old auth placeholder (hardcoded token — superseded by middlewares/auth.js)
 │   ├── config/
-│   │   └── database.js     # Mongoose connection setup
+│   │   └── database.js         # Mongoose connection setup
+│   ├── middlewares/
+│   │   └── auth.js             # JWT auth middleware — verifies token cookie, attaches user to req.user
 │   ├── models/
-│   │   └── user.js         # Mongoose User model/schema (uses validator library)
+│   │   └── user.js             # Mongoose User model/schema + getJWT() & validatePassword() instance methods
 │   └── utils/
-│       └── validation.js   # Input validation helpers (validateSignupData)
-├── .env                    # Environment variables (not committed)
-├── .gitignore              # Git ignored files
-├── package.json            # Project metadata & scripts
-└── README.md               # Project documentation
+│       └── validation.js       # Input validation helpers (validateSignupData)
+├── .env                        # Environment variables (not committed)
+├── .gitignore                  # Git ignored files
+├── package.json                # Project metadata & scripts
+└── README.md                   # Project documentation
 ```
+
+> Middlewares used: `express.json()` for JSON body parsing and `cookie-parser` for reading/writing HTTP cookies.
 
 ---
 
@@ -97,9 +102,9 @@ Creates a new user from the JSON request body and saves it to the database.
 2. **Hash password** — The plaintext password is hashed with `bcrypt` (10 salt rounds) before being stored.
 3. **Save user** — A new `User` document is created with the hashed password and saved to MongoDB.
 
-> ⚠️ The duplicate `emailId` check is currently **commented out** in `app.js` (an `existingUser` lookup is done but the guard block is disabled). The `emailId` field is marked `unique` in the schema, so MongoDB will still reject duplicates with a `500` error.
+> ⚠️ The duplicate `emailId` check is currently **commented out** in `app.js` — an `existingUser` lookup is performed but the guard block is disabled. The `emailId` field is marked `unique` in the Mongoose schema, so MongoDB will still reject duplicates with a `500` error. Uncomment the guard block to return a clean `400` response instead.
 
-> ⚠️ **Password strength** is validated by `validator.isStrongPassword()` in `validateSignupData` before hashing. Weak passwords throw an error immediately.
+> ⚠️ **Password strength** is validated in two places: by `validator.isStrongPassword()` in `validateSignupData` (before hashing), and also by the schema-level `validate()` in `user.js` (applied on save/update). Weak passwords throw an error immediately.
 
 **Request Body (JSON):**
 
@@ -145,8 +150,8 @@ Authenticates an existing user by verifying their email and password.
 
 **Login flow:**
 1. Look up the user by `emailId` — throw `"Invalid Credential"` if not found.
-2. Compare the submitted password against the stored **bcrypt hash** using `bcrypt.compare`.
-3. Return the user's public profile on success (`firstName`, `lastName`, `emailId`).
+2. Compare the submitted password against the stored **bcrypt hash** using the `user.validatePassword(password)` instance method (defined on the User model).
+3. On success, call `user.getJWT()` (instance method on the User model) to sign a **JWT** token with the user's `_id`, set to expire in **7 days**, and set it as a `token` cookie that expires in **8 hours**.
 
 **Request Body (JSON):**
 
@@ -158,9 +163,13 @@ Authenticates an existing user by verifying their email and password.
 ```
 
 **Response:**
-- `200 OK` — `{ "message": "Login successful", "user": { "firstName", "lastName", "emailId" } }`
+- `200 OK` — Sets `token` JWT cookie; returns `{ "message": "Login successful", "user": { "firstName", "lastName", "emailId" } }`
 - `401 Unauthorized` — `{ "message": "Invalid email or password" }`
 - `400 Bad Request` — `{ "message": "Error saving user", "error": "..." }` (e.g. user not found)
+
+> ⚠️ The JWT is currently signed with a **hardcoded secret** (`"Abhay@123"`) inside `user.getJWT()`. Move this secret to an environment variable (`process.env.JWT_SECRET`) before going to production.
+
+> ℹ️ **Token lifetime:** JWT is valid for **7 days** (`expiresIn: "7d"`). The `token` cookie itself expires after **8 hours** (`Date.now() + 8 * 3600000`) — the cookie will be cleared from the browser before the JWT itself expires.
 
 ```js
 // Example usage
@@ -245,6 +254,32 @@ fetch('http://localhost:5555/user', {
 
 ---
 
+### `GET /profile`
+
+A **protected route** — returns the authenticated user's full profile from the database.
+
+**Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.js`). Requires a valid `token` JWT cookie (set during `/login`).
+
+**Profile flow:**
+1. `userAuth` middleware reads the `token` cookie and verifies the JWT.
+2. Middleware looks up the user by `_id` from the decoded token and attaches it to `req.user`.
+3. The route handler reads `req.user` and sends the user document back.
+
+**Response:**
+- `200 OK` — The authenticated user's document
+- `400 Bad Request` — `"Error: token is not valid!!...."` (missing/invalid cookie) or `"Error: User not found"`
+
+```js
+// Example usage (cookie sent automatically by browser after login)
+fetch('http://localhost:5555/profile', {
+  credentials: 'include'
+});
+```
+
+> ⚠️ The JWT secret is currently **hardcoded** as `"Abhay@123"` in `middlewares/auth.js`. Move it to `process.env.JWT_SECRET` before deploying to production.
+
+---
+
 ### `PATCH /user`
 
 Updates an existing user's data by `userId`. Pass any fields to update along with the `userId`. Validators are run on update (`runValidators: true`).
@@ -278,19 +313,46 @@ fetch('http://localhost:5555/user', {
 
 `src/models/user.js` defines the Mongoose schema for a user document. The schema includes `timestamps: true`, so each document automatically gets `createdAt` and `updatedAt` fields.
 
-| Field       | Type       | Required | Constraints / Default                                                       |
-|-------------|------------|----------|-----------------------------------------------------------------------------|
-| `firstName` | `String`   | ✅ Yes   | `minLength: 3`, `maxLength: 50`                                             |
-| `lastName`  | `String`   | ❌ No    | —                                                                           |
-| `emailId`   | `String`   | ✅ Yes   | `unique`, `lowercase`, `trim`                                               |
-| `password`  | `String`   | ✅ Yes   | Stored as a **bcrypt hash** (10 rounds); validated for strength before hashing |
-| `age`       | `String`   | ❌ No    | `min: 18` *(note: stored as String, min applies to numeric comparison)*     |
-| `gender`    | `String`   | ❌ No    | Must be `"male"`, `"female"`, or `"others"`                                 |
-| `photoUrl`  | `String`   | ❌ No    | Default: brain image URL                                                    |
-| `about`     | `String`   | ❌ No    | Default: `"this is the default about the user"`                             |
-| `skills`    | `[String]` | ❌ No    | Array of skill strings                                                      |
-| `createdAt` | `Date`     | auto     | Auto-generated by Mongoose timestamps                                       |
-| `updatedAt` | `Date`     | auto     | Auto-generated by Mongoose timestamps                                       |
+| Field       | Type       | Required | Constraints / Default                                                                            |
+|-------------|------------|----------|--------------------------------------------------------------------------------------------------|
+| `firstName` | `String`   | ✅ Yes   | `minLength: 3`, `maxLength: 50`                                                                  |
+| `lastName`  | `String`   | ❌ No    | —                                                                                                |
+| `emailId`   | `String`   | ✅ Yes   | `unique`, `lowercase`, `trim`                                                                    |
+| `password`  | `String`   | ✅ Yes   | Stored as a **bcrypt hash** (10 rounds); schema-level validator enforces `isStrongPassword`      |
+| `age`       | `String`   | ❌ No    | `min: 18` *(note: stored as String, min applies to numeric comparison)*                          |
+| `gender`    | `String`   | ❌ No    | Must be `"male"`, `"female"`, or `"others"`                                                      |
+| `photoUrl`  | `String`   | ❌ No    | Default: brain image URL                                                                         |
+| `about`     | `String`   | ❌ No    | Default: `"this is the default about the user"`                                                  |
+| `skills`    | `[String]` | ❌ No    | Array of skill strings                                                                           |
+| `createdAt` | `Date`     | auto     | Auto-generated by Mongoose timestamps                                                            |
+| `updatedAt` | `Date`     | auto     | Auto-generated by Mongoose timestamps                                                            |
+
+### Instance Methods
+
+The User model exposes two instance methods defined directly on the schema:
+
+#### `user.getJWT()`
+
+Signs and returns a JWT for the user.
+
+```js
+userModel.methods.getJWT = async function () {
+  const token = await jwt.sign({ _id: this._id }, "Abhay@123", { expiresIn: "7d" });
+  return token;
+};
+```
+
+> ⚠️ The secret is currently hardcoded. Move to `process.env.JWT_SECRET` before production.
+
+#### `user.validatePassword(inputPassword)`
+
+Compares a plaintext password against the stored bcrypt hash. Returns `true` if valid, `false` otherwise.
+
+```js
+userModel.methods.validatePassword = async function (passwordInputByUser) {
+  return bcrypt.compare(passwordInputByUser, this.password);
+};
+```
 
 ---
 
@@ -302,11 +364,11 @@ fetch('http://localhost:5555/user', {
 
 Validates the signup request body and **throws an Error** if any check fails (caught by the route's `try/catch`):
 
-| Check | Condition | Error thrown |
-|---|---|---|
-| Name | `firstName` or `lastName` must be present | `"Name is not valid!"` |
-| Email | Must be a valid email format (`validator.isEmail`) | `"Email is not valid"` |
-| Password | Must pass `validator.isStrongPassword` | `"Please enter the strong Password"` |
+| Check    | Condition                                              | Error thrown                        |
+|----------|--------------------------------------------------------|-------------------------------------|
+| Name     | `firstName` or `lastName` must be present              | `"Name is not valid!"`              |
+| Email    | Must be a valid email format (`validator.isEmail`)     | `"Email is not valid"`              |
+| Password | Must pass `validator.isStrongPassword`                 | `"Please enter the strong Password"`|
 
 ```js
 const { validateSignupData } = require('./utils/validation');
@@ -317,20 +379,54 @@ validateSignupData(req); // throws on invalid input
 
 ---
 
-## 🔐 Authentication Middleware
+## 🔐 Authentication
 
-`src/auth.js` exports a `userAuth` middleware that validates a token before allowing access to protected routes.
+### `userAuth` Middleware (`src/middlewares/auth.js`)
 
-> ⚠️ Currently uses a **hardcoded token** (`'xyz'`). This is a placeholder — replace with JWT or session-based auth before going to production.
+All protected routes use the `userAuth` middleware, which handles JWT verification and user lookup:
+
+**Middleware flow:**
+1. Read the `token` cookie from the request — throw `"token is not valid!!...."` if missing.
+2. Verify the JWT with `jwt.verify(token, "Abhay@123")` — throw if invalid or expired.
+3. Check the decoded payload is truthy — throw `"jwt is expired"` if falsy.
+4. Extract `_id` from the decoded payload and fetch the user from MongoDB — throw `"User not found"` if no match.
+5. Attach the user document to `req.user` and call `next()` to proceed to the route handler.
 
 ```js
-const { userAuth } = require('./auth');
+const { userAuth } = require('./middlewares/auth');
 
-// Usage on a protected route
-app.get('/protected', userAuth, (req, res) => {
-  res.send('Authenticated!');
+// Protect any route by adding userAuth as middleware
+app.get('/profile', userAuth, async (req, res) => {
+  const user = req.user; // user is already fetched and validated
+  res.send(user);
 });
 ```
+
+**Currently protected routes:**
+- `GET /profile` — uses `userAuth`
+
+> ⚠️ The JWT secret is currently **hardcoded** as `"Abhay@123"` in `middlewares/auth.js`. Move it to an environment variable (`process.env.JWT_SECRET`) before going to production.
+
+### JWT Signing (`user.getJWT()`)
+
+JWT signing has been moved out of `app.js` and into the **User model instance method** `getJWT()`. The `/login` route now calls it as:
+
+```js
+const token = await user.getJWT();
+res.cookie("token", token, { expires: new Date(Date.now() + 8 * 3600000) });
+```
+
+### Password Verification (`user.validatePassword()`)
+
+Password comparison has been moved out of `app.js` and into the **User model instance method** `validatePassword()`. The `/login` route now calls it as:
+
+```js
+const isPasswordValid = await user.validatePassword(password);
+```
+
+### Legacy placeholder (`src/auth.js`)
+
+`src/auth.js` still exists but uses a **hardcoded token** (`'xyz'`) and is **not wired to any route**. It has been superseded by `src/middlewares/auth.js`.
 
 ---
 
@@ -374,13 +470,15 @@ git push -u origin main
 
 ## 📦 Dependencies
 
-| Package     | Version    | Purpose                                         |
-|-------------|------------|-------------------------------------------------|
-| `express`   | `^5.2.1`   | HTTP server framework                           |
-| `mongoose`  | `^9.6.3`   | MongoDB ODM                                     |
-| `bcrypt`    | `^5.x`     | Password hashing (10 salt rounds)               |
-| `validator` | `^13.15.35`| String validation (email, password strength...) |
-| `nodemon`   | `^3.1.14`  | Auto-reload on file changes (devDependency)     |
+| Package         | Version     | Purpose                                          |
+|-----------------|-------------|--------------------------------------------------|
+| `express`       | `^5.2.1`    | HTTP server framework                            |
+| `mongoose`      | `^9.6.3`    | MongoDB ODM                                      |
+| `bcrypt`        | `^6.0.0`    | Password hashing (10 salt rounds)                |
+| `jsonwebtoken`  | `^9.0.3`    | JWT signing and verification for auth            |
+| `validator`     | `^13.15.35` | String validation (email, password strength...)  |
+| `cookie-parser` | `^1.4.7`    | Parse and set HTTP cookies                       |
+| `nodemon`       | `^3.1.14`   | Auto-reload on file changes (devDependency)      |
 
 ---
 
