@@ -75,3 +75,10 @@ Delete a user record by ID.
     "userId": "user_mongodb_id"
   }
   ```
+
+### 8. Send Connection Request
+Send a connection request to another user.
+* **Method:** `POST`
+* **Route:** `/sendConnectionRequest`
+* **Authentication:** Requires `token` Cookie
+
