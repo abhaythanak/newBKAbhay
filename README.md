@@ -80,7 +80,7 @@ newBKAbhay/
 │   ├── models/
 │   │   └── user.js             # Mongoose User model/schema + getJWT() & validatePassword() instance methods
 │   ├── routers/
-│   │   ├── auth.js             # Auth router (signup, login)
+│   │   ├── auth.js             # Auth router (signup, login, logout)
 │   │   ├── feed.js             # Feed router (feed API)
 │   │   ├── profile.js          # Profile router (view profile)
 │   │   ├── request.js          # Request router (connection requests)
@@ -188,6 +188,26 @@ fetch('http://localhost:5555/login', {
     emailId: 'john@example.com',
     password: 'StrongPass@123'
   })
+});
+```
+
+---
+
+### `POST /logout` (Defined in `src/routers/auth.js`)
+
+Logs out the user by clearing their session cookie.
+
+**Logout flow:**
+1. Clear the `token` cookie by setting it to `null` and setting the expiry date to the current timestamp.
+
+**Response:**
+- `200 OK` — `"logout Successully!!!."`
+
+```js
+// Example usage
+fetch('http://localhost:5555/logout', {
+  method: 'POST',
+  credentials: 'include'
 });
 ```
 

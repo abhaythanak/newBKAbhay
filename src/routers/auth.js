@@ -68,5 +68,19 @@ router.post("/login", async (req, res) => {
         res.status(400).json({ message: "Error saving user", error: error.message });
     }
 })
+// post logout
+router.post("/logout", async (req, res) => {
+    res.cookie("token", null, {
+        expires: new Date(Date.now())
+    })
+    res.send("logout Successully!!!.")
+
+   // or chaining also use 
+//    res
+//    .cookie("token", null, {
+//         expires: new Date(Date.now())
+//     })
+//     .send("logout Successully!!!.")
+})
 
 module.exports = router

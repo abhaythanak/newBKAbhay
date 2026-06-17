@@ -82,3 +82,9 @@ Send a connection request to another user.
 * **Route:** `/sendConnectionRequest`
 * **Authentication:** Requires `token` Cookie
 
+### 9. Logout
+Clear the session cookie (`token`).
+* **Method:** `POST`
+* **Route:** `/logout`
+
+
