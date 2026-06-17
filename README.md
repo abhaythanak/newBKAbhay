@@ -71,7 +71,7 @@ The server will start on **http://localhost:5555**
 ```
 newBKAbhay/
 ├── src/
-│   ├── app.js                  # Express app entry point — connects DB, defines routes, starts server
+│   ├── app.js                  # Express app entry point — connects DB, loads routers, starts server
 │   ├── auth.js                 # Old auth placeholder (hardcoded token — superseded by middlewares/auth.js)
 │   ├── config/
 │   │   └── database.js         # Mongoose connection setup
@@ -79,6 +79,12 @@ newBKAbhay/
 │   │   └── auth.js             # JWT auth middleware — verifies token cookie, attaches user to req.user
 │   ├── models/
 │   │   └── user.js             # Mongoose User model/schema + getJWT() & validatePassword() instance methods
+│   ├── routers/
+│   │   ├── auth.js             # Auth router (signup, login)
+│   │   ├── feed.js             # Feed router (feed API)
+│   │   ├── profile.js          # Profile router (view profile)
+│   │   ├── request.js          # Request router (connection requests)
+│   │   └── user.js             # User CRUD router (get, update, delete user)
 │   └── utils/
 │       └── validation.js       # Input validation helpers (validateSignupData)
 ├── .env                        # Environment variables (not committed)
@@ -89,11 +95,12 @@ newBKAbhay/
 
 > Middlewares used: `express.json()` for JSON body parsing and `cookie-parser` for reading/writing HTTP cookies.
 
+
 ---
 
 ## 🔗 API Routes
 
-### `POST /signup`
+### `POST /signup` (Defined in `src/routers/auth.js`)
 
 Creates a new user from the JSON request body and saves it to the database.
 
@@ -102,7 +109,8 @@ Creates a new user from the JSON request body and saves it to the database.
 2. **Hash password** — The plaintext password is hashed with `bcrypt` (10 salt rounds) before being stored.
 3. **Save user** — A new `User` document is created with the hashed password and saved to MongoDB.
 
-> ⚠️ The duplicate `emailId` check is currently **commented out** in `app.js` — an `existingUser` lookup is performed but the guard block is disabled. The `emailId` field is marked `unique` in the Mongoose schema, so MongoDB will still reject duplicates with a `500` error. Uncomment the guard block to return a clean `400` response instead.
+> ⚠️ The duplicate `emailId` check is currently **commented out** in `src/routers/auth.js` — an `existingUser` lookup is performed but the guard block is disabled. The `emailId` field is marked `unique` in the Mongoose schema, so MongoDB will still reject duplicates with a `500` error. Uncomment the guard block to return a clean `400` response instead.
+
 
 > ⚠️ **Password strength** is validated in two places: by `validator.isStrongPassword()` in `validateSignupData` (before hashing), and also by the schema-level `validate()` in `user.js` (applied on save/update). Weak passwords throw an error immediately.
 
@@ -144,7 +152,7 @@ fetch('http://localhost:5555/signup', {
 
 ---
 
-### `POST /login`
+### `POST /login` (Defined in `src/routers/auth.js`)
 
 Authenticates an existing user by verifying their email and password.
 
@@ -185,7 +193,7 @@ fetch('http://localhost:5555/login', {
 
 ---
 
-### `GET /user`
+### `GET /user` (Defined in `src/routers/user.js`)
 
 Fetches a single user by `emailId` from the request body.
 
@@ -212,7 +220,7 @@ fetch('http://localhost:5555/user', {
 
 ---
 
-### `GET /feed`
+### `GET /feed` (Defined in `src/routers/feed.js`)
 
 Fetches **all users** from the database. No request body required.
 
@@ -227,7 +235,7 @@ fetch('http://localhost:5555/feed');
 
 ---
 
-### `DELETE /user`
+### `DELETE /user` (Defined in `src/routers/user.js`)
 
 Deletes a user from the database by `userId` from the request body.
 
@@ -254,7 +262,7 @@ fetch('http://localhost:5555/user', {
 
 ---
 
-### `GET /profile`
+### `GET /profile` (Defined in `src/routers/profile.js`)
 
 A **protected route** — returns the authenticated user's full profile from the database.
 
@@ -280,7 +288,27 @@ fetch('http://localhost:5555/profile', {
 
 ---
 
-### `PATCH /user`
+### `POST /sendConnectionRequest` (Defined in `src/routers/request.js`)
+
+A **protected route** — sends a connection request.
+
+**Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.js`). Requires a valid `token` JWT cookie.
+
+**Response:**
+- `200 OK` — Returns a string: `<firstName>sent the connection request`
+- `400 Bad Request` — Error message (missing/invalid token)
+
+```js
+// Example usage (cookie sent automatically by browser after login)
+fetch('http://localhost:5555/sendConnectionRequest', {
+  method: 'POST',
+  credentials: 'include'
+});
+```
+
+---
+
+### `PATCH /user` (Defined in `src/routers/user.js`)
 
 Updates an existing user's data by `userId`. Pass any fields to update along with the `userId`. Validators are run on update (`runValidators: true`).
 
@@ -308,6 +336,7 @@ fetch('http://localhost:5555/user', {
 ```
 
 ---
+
 
 ## 👤 User Model
 
@@ -403,7 +432,9 @@ app.get('/profile', userAuth, async (req, res) => {
 ```
 
 **Currently protected routes:**
-- `GET /profile` — uses `userAuth`
+- `GET /profile` (Defined in `src/routers/profile.js`) — uses `userAuth`
+- `POST /sendConnectionRequest` (Defined in `src/routers/request.js`) — uses `userAuth`
+
 
 > ⚠️ The JWT secret is currently **hardcoded** as `"Abhay@123"` in `middlewares/auth.js`. Move it to an environment variable (`process.env.JWT_SECRET`) before going to production.
 
