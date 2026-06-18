@@ -20,10 +20,10 @@ const requestRouter = require("./routers/request")
 const userRouter = require("./routers/user")
 
 app.use("/", authRouter);
-app.use("/", feedRouter)
-app.use("/", profileRouter)
-app.use("/", requestRouter)
-app.use("/", userRouter)
+app.use("/", feedRouter);
+app.use("/", profileRouter);
+app.use("/", requestRouter);
+app.use("/", userRouter);
 
 
 connectDB().then(() => {

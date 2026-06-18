@@ -282,7 +282,7 @@ fetch('http://localhost:5555/user', {
 
 ---
 
-### `GET /profile` (Defined in `src/routers/profile.js`)
+### `GET /profile/view` (Defined in `src/routers/profile.js`)
 
 A **protected route** — returns the authenticated user's full profile from the database.
 
@@ -295,16 +295,57 @@ A **protected route** — returns the authenticated user's full profile from the
 
 **Response:**
 - `200 OK` — The authenticated user's document
-- `400 Bad Request` — `"Error: token is not valid!!...."` (missing/invalid cookie) or `"Error: User not found"`
+- `400 Bad Request` — `{ "message": "Error saving user", "error": "..." }`
 
 ```js
 // Example usage (cookie sent automatically by browser after login)
-fetch('http://localhost:5555/profile', {
+fetch('http://localhost:5555/profile/view', {
   credentials: 'include'
 });
 ```
 
 > ⚠️ The JWT secret is currently **hardcoded** as `"Abhay@123"` in `middlewares/auth.js`. Move it to `process.env.JWT_SECRET` before deploying to production.
+
+---
+
+### `PATCH /profile/edit` (Defined in `src/routers/profile.js`)
+
+A **protected route** — updates the authenticated user's profile data. Only allowed fields are accepted for editing: `firstName`, `lastName`, `emailId`, `photoUrl`, `about`, `age`, and `skills`.
+
+**Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.js`). Requires a valid `token` JWT cookie.
+
+**Edit flow:**
+1. **Validate input** — `validateEditProfileData(req)` from `src/utils/validation.js` checks that only allowed fields are present in the request body.
+2. **Update user** — Updates the fields on the logged-in user document and saves it back to MongoDB, running Mongoose validators.
+
+**Request Body (JSON):**
+
+```json
+{
+  "firstName": "John",
+  "lastName": "Doe",
+  "about": "New bio details",
+  "skills": ["JavaScript", "Node.js", "React"]
+}
+```
+
+**Response:**
+- `200 OK` — `{ "message": "<Name>, your profile updated successfully!!", "data": { ...updatedUserDoc } }`
+- `400 Bad Request` — `{ "message": "Error saving user", "error": "..." }` (validation failure or invalid fields)
+
+```js
+// Example usage
+fetch('http://localhost:5555/profile/edit', {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json' },
+  credentials: 'include',
+  body: JSON.stringify({
+    firstName: 'John',
+    about: 'New bio details'
+  })
+});
+```
+
 
 ---
 
@@ -445,14 +486,15 @@ All protected routes use the `userAuth` middleware, which handles JWT verificati
 const { userAuth } = require('./middlewares/auth');
 
 // Protect any route by adding userAuth as middleware
-app.get('/profile', userAuth, async (req, res) => {
+router.get('/profile/view', userAuth, async (req, res) => {
   const user = req.user; // user is already fetched and validated
   res.send(user);
 });
 ```
 
 **Currently protected routes:**
-- `GET /profile` (Defined in `src/routers/profile.js`) — uses `userAuth`
+- `GET /profile/view` (Defined in `src/routers/profile.js`) — uses `userAuth`
+- `PATCH /profile/edit` (Defined in `src/routers/profile.js`) — uses `userAuth`
 - `POST /sendConnectionRequest` (Defined in `src/routers/request.js`) — uses `userAuth`
 
 
