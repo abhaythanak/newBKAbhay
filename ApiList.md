@@ -33,10 +33,28 @@ Authenticate and receive a session cookie (`token`).
 ### 3. Get Profile
 Get the logged-in user's profile info.
 * **Method:** `GET`
-* **Route:** `/profile`
+* **Route:** `/profile/view`
 * **Authentication:** Requires `token` Cookie
 
-### 4. Get User Details
+### 4. Edit Profile
+Edit the logged-in user's profile info.
+* **Method:** `PATCH`
+* **Route:** `/profile/edit`
+* **Authentication:** Requires `token` Cookie
+* **Request Body:**
+  ```json
+  {
+    "firstName": "John",
+    "lastName": "Doe",
+    "emailId": "john@example.com",
+    "photoUrl": "https://example.com/photo.jpg",
+    "about": "A short bio",
+    "age": 25,
+    "skills": ["JavaScript", "Node.js"]
+  }
+  ```
+
+### 5. Get User Details
 Fetch details of a user by email ID.
 * **Method:** `GET`
 * **Route:** `/user`
@@ -47,12 +65,12 @@ Fetch details of a user by email ID.
   }
   ```
 
-### 5. Feed
+### 6. Feed
 Get all registered users.
 * **Method:** `GET`
 * **Route:** `/feed`
 
-### 6. Update User
+### 7. Update User
 Update information for an existing user.
 * **Method:** `PATCH`
 * **Route:** `/user`
@@ -65,7 +83,7 @@ Update information for an existing user.
   }
   ```
 
-### 7. Delete User
+### 8. Delete User
 Delete a user record by ID.
 * **Method:** `DELETE`
 * **Route:** `/user`
@@ -76,9 +94,16 @@ Delete a user record by ID.
   }
   ```
 
-### 8. Send Connection Request
+### 9. Send Connection Request
 Send a connection request to another user.
 * **Method:** `POST`
 * **Route:** `/sendConnectionRequest`
 * **Authentication:** Requires `token` Cookie
+
+### 10. Logout
+Clear the session cookie (`token`).
+* **Method:** `POST`
+* **Route:** `/logout`
+
+
 
