@@ -1,7 +1,7 @@
 # DevTinder API List
 
 A simple checklist and usage guide for the available API endpoints.
-
+All Time Think About Corner Cases(Edge Cases)
 ---
 
 ### 1. Signup
