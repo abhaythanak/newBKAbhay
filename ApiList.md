@@ -95,9 +95,12 @@ Delete a user record by ID.
   ```
 
 ### 9. Send Connection Request
-Send a connection request to another user.
+Send a connection request (interested or ignore) to another user.
 * **Method:** `POST`
-* **Route:** `/sendConnectionRequest`
+* **Route:** `/request/send/:status/:toUserId`
+* **Route Params:**
+  * `status`: `ignore` or `interested`
+  * `toUserId`: MongoDB ID of the target user
 * **Authentication:** Requires `token` Cookie
 
 ### 10. Logout
