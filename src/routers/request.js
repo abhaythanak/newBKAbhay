@@ -12,7 +12,12 @@ router.post("/request/send/:status/:toUserId", userAuth, async (req, res) => {
         const status = req.params.status;
         // check user is present in data base or not.
         const checkUser = await User.findById(toUserId)
+        // check only allowed status from enum to compare with db
         const allowedStatus = ["ignore", "interested"]
+
+        // if (fromUserId === toUserId) {
+        //     return res.status(400).send({ message: "cannot send request to self!!!." })
+        // }
 
         if (!checkUser) {
             return res.status(400).send({ message: "User not found!!!" })
@@ -48,7 +53,7 @@ router.post("/request/send/:status/:toUserId", userAuth, async (req, res) => {
         const data = await ConnectionRequest.save()
 
         res.json({
-            message: "connection request sent successfully",
+            message: req.user.firstName + "is" + status + "in" + checkUser.firstName,
             data,
         })
     } catch (error) {

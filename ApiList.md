@@ -102,6 +102,8 @@ Send a connection request (interested or ignore) to another user.
   * `status`: `ignore` or `interested`
   * `toUserId`: MongoDB ID of the target user
 * **Authentication:** Requires `token` Cookie
+* **Response Message:** `<fromUserFirstName>is<status>in<toUserFirstName>` (e.g. `JohnisinterestedinAlice`)
+* **Note:** Users cannot send connection requests to themselves (throws validation error).
 
 ### 10. Logout
 Clear the session cookie (`token`).
