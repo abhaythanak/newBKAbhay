@@ -349,19 +349,23 @@ fetch('http://localhost:5555/profile/edit', {
 
 ---
 
-### `POST /sendConnectionRequest` (Defined in `src/routers/request.js`)
+### `POST /request/send/:status/:toUserId` (Defined in `src/routers/request.js`)
 
-A **protected route** — sends a connection request.
+A **protected route** — sends a connection request (either `"interested"` or `"ignore"`) to another user.
 
 **Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.js`). Requires a valid `token` JWT cookie.
 
+**Route Parameters:**
+- `status` (String): Must be either `"ignore"` or `"interested"`.
+- `toUserId` (String): The MongoDB ObjectId of the target user.
+
 **Response:**
-- `200 OK` — Returns a string: `<firstName>sent the connection request`
-- `400 Bad Request` — Error message (missing/invalid token)
+- `200 OK` — `{ "message": "connection request sent successfully", "data": { "fromUserId", "toUserId", "status", "_id", "createdAt", "updatedAt" } }`
+- `400 Bad Request` — `{ "message": "Error sending request", "error": "..." }` (e.g., user not found, invalid status, or request already exists)
 
 ```js
 // Example usage (cookie sent automatically by browser after login)
-fetch('http://localhost:5555/sendConnectionRequest', {
+fetch('http://localhost:5555/request/send/interested/64abc123def456', {
   method: 'POST',
   credentials: 'include'
 });
@@ -495,7 +499,7 @@ router.get('/profile/view', userAuth, async (req, res) => {
 **Currently protected routes:**
 - `GET /profile/view` (Defined in `src/routers/profile.js`) — uses `userAuth`
 - `PATCH /profile/edit` (Defined in `src/routers/profile.js`) — uses `userAuth`
-- `POST /sendConnectionRequest` (Defined in `src/routers/request.js`) — uses `userAuth`
+- `POST /request/send/:status/:toUserId` (Defined in `src/routers/request.js`) — uses `userAuth`
 
 
 > ⚠️ The JWT secret is currently **hardcoded** as `"Abhay@123"` in `middlewares/auth.js`. Move it to an environment variable (`process.env.JWT_SECRET`) before going to production.
