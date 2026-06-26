@@ -61,4 +61,20 @@ router.post("/request/send/:status/:toUserId", userAuth, async (req, res) => {
     }
 })
 
+router.post("/request/review/:status/:requestId",userAuth,async (req,res)=>{
+    try {
+        // comes from userAuth next() loggedInUser data
+        const loggedInUser = req.user;
+        const {status,requestId} = req.params;
+        const allowedStatus = ["accepted","rejected"]
+        if (!allowedStatus.includes(status)) {
+            return res.status(400).json({message:`${status} not allowed`})
+        }
+        
+    } catch (error) {
+        res.status(400).json({ message: "Error sending request", error: error.message });
+    }
+    res.send("review successfully ")
+})
+
 module.exports = router;
