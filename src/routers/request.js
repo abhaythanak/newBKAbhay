@@ -61,20 +61,30 @@ router.post("/request/send/:status/:toUserId", userAuth, async (req, res) => {
     }
 })
 
-router.post("/request/review/:status/:requestId",userAuth,async (req,res)=>{
+router.post("/request/review/:status/:requestId", userAuth, async (req, res) => {
     try {
         // comes from userAuth next() loggedInUser data
         const loggedInUser = req.user;
-        const {status,requestId} = req.params;
-        const allowedStatus = ["accepted","rejected"]
+        const { status, requestId } = req.params;
+        const allowedStatus = ["accepted", "rejected"]
         if (!allowedStatus.includes(status)) {
-            return res.status(400).json({message:`${status} not allowed`})
+            return res.status(400).json({ message: `${status} not allowed` })
         }
-        
+        const connectionRequest = await ConnectionRequestModel.findOne({
+            _id: requestId,
+            toUserId: loggedInUser._id,
+            status: "interested",
+        })
+        if (!connectionRequest) {
+            return res.status(404).json({ message: "connection request not found" })
+        }
+        connectionRequest.status = status;
+        const data = await connectionRequest.save()
+        res.send({ message: "connection request" + status, data })
+
     } catch (error) {
         res.status(400).json({ message: "Error sending request", error: error.message });
     }
-    res.send("review successfully ")
 })
 
 module.exports = router;
