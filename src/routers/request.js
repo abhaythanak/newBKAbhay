@@ -75,6 +75,7 @@ router.post("/request/review/:status/:requestId", userAuth, async (req, res) => 
             toUserId: loggedInUser._id,
             status: "interested",
         })
+        console.log(_id)
         if (!connectionRequest) {
             return res.status(404).json({ message: "connection request not found" })
         }

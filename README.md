@@ -373,6 +373,70 @@ fetch('http://localhost:5555/request/send/interested/64abc123def456', {
 
 ---
 
+### `POST /request/review/:status/:requestId` (Defined in `src/routers/request.js`)
+
+A **protected route** — reviews (accepts or rejects) an incoming connection request.
+
+**Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.js`). Requires a valid `token` JWT cookie.
+
+**Route Parameters:**
+- `status` (String): Must be either `"accepted"` or `"rejected"`.
+- `requestId` (String): The MongoDB ObjectId of the connection request to review.
+
+**Response:**
+- `200 OK` — `{ "message": "connection request <status>", "data": { ...connectionRequestDoc } }` (e.g. `connection request accepted`)
+- `400 Bad Request` — `{ "message": "Error sending request", "error": "..." }` (e.g. invalid status)
+- `404 Not Found` — `{ "message": "connection request not found" }` (e.g. if request does not exist or isn't addressed to the logged-in user with status `"interested"`)
+
+```js
+// Example usage (accepting a request)
+fetch('http://localhost:5555/request/review/accepted/64abc123def456', {
+  method: 'POST',
+  credentials: 'include'
+});
+```
+
+---
+
+### `GET /user/request/received` (Defined in `src/routers/user.js`)
+
+A **protected route** — fetches all pending/interested connection requests received by the logged-in user. It automatically populates the sender's (`fromUserId`) details.
+
+**Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.js`). Requires a valid `token` JWT cookie.
+
+**Response:**
+- `200 OK` — `{ "message": "Data fetch successfully", "data": [ ...connectionRequestsWithSenderDetails ] }`
+- `400 Bad Request` — `"failed to update: <error>"`
+
+```js
+// Example usage
+fetch('http://localhost:5555/user/request/received', {
+  method: 'GET',
+  credentials: 'include'
+});
+```
+
+---
+
+### `GET /user/connection` (Defined in `src/routers/user.js`)
+
+A **protected route** — fetches the active connections of the logged-in user. (Currently under development).
+
+**Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.js`). Requires a valid `token` JWT cookie.
+
+**Response:** (Currently under development)
+
+```js
+// Example usage
+fetch('http://localhost:5555/user/connection', {
+  method: 'GET',
+  credentials: 'include'
+});
+```
+
+
+---
+
 ### `PATCH /user` (Defined in `src/routers/user.js`)
 
 Updates an existing user's data by `userId`. Pass any fields to update along with the `userId`. Validators are run on update (`runValidators: true`).

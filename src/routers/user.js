@@ -1,8 +1,45 @@
 const express = require("express");
 const User = require("../models/user");
+const { userAuth } = require("../middlewares/auth");
+const ConnectionRequestModel = require("../models/connectionRequest");
 const router = express.Router();
 
 
+
+router.get("/user/request/received",userAuth,async(req,res)=>{
+    try {
+        const loggedInUser = req.user;
+        const connectionRequest = await ConnectionRequestModel.find({
+            toUserId:loggedInUser._id,
+            status:"interested"
+        })
+       // .populate("fromUserId",["firstName","lastName","age","gender","photoUrl","about","skills"]). ||||. or
+        .populate("fromUserId","firstName lastName age gender photoUrl about skills")
+
+        res.json({
+            message:"Data fetch successfully",
+            data:connectionRequest
+        })
+
+    } catch (error) {
+        res.status(400).send("failed to update:" + error.message)
+    }
+})
+
+router.get("/user/connection",userAuth,(req,res)=>{
+    try {
+        
+    } catch (error) {
+        res.status(400).send("failed to update:" + error.message)
+    }
+})
+
+
+
+//.     ------- --- ------------- ---------------- ---------------
+//.     ------- --- ------------- ---------------- ---------------
+//.     ------- --- ------------- ---------------- ---------------
+//.  user data All thats not needed 
 //.  patch
 router.patch("/user", async (req, res) => {
     const data = req.body;
