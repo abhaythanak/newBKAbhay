@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const connectionRequestSchema = new mongoose.Schema({
     fromUserId: {
         type: mongoose.Schema.Types.ObjectId,
+        ref:"User", // referance to the user collection i want to connect this with user schema for show the data
         required: true,
     },
     toUserId: {
