@@ -418,17 +418,19 @@ fetch('http://localhost:5555/user/request/received', {
 
 ---
 
-### `GET /user/connection` (Defined in `src/routers/user.js`)
+### `GET /user/connections` (Defined in `src/routers/user.js`)
 
-A **protected route** — fetches the active connections of the logged-in user. (Currently under development).
+A **protected route** — fetches the active connections (where status is `"accepted"`) of the logged-in user. Only safe fields (`firstName`, `lastName`, `age`, `gender`, `photoUrl`, `about`, `skills`) are returned for the connected users.
 
 **Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.js`). Requires a valid `token` JWT cookie.
 
-**Response:** (Currently under development)
+**Response:**
+- `200 OK` — `{ "data": [ { "_id", "firstName", "lastName", "age", "gender", "photoUrl", "about", "skills" } ] }`
+- `400 Bad Request` — `"failed to update: <error>"`
 
 ```js
 // Example usage
-fetch('http://localhost:5555/user/connection', {
+fetch('http://localhost:5555/user/connections', {
   method: 'GET',
   credentials: 'include'
 });

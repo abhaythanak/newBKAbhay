@@ -154,9 +154,25 @@ Fetch connection requests received by the logged-in user that are still pending/
 ### 13. Get User Connections
 Fetch the active connections of the logged-in user.
 * **Method:** `GET`
-* **Route:** `/user/connection`
+* **Route:** `/user/connections`
 * **Authentication:** Requires `token` Cookie
-* **Response:** (Currently under development)
+* **Response:**
+  ```json
+  {
+    "data": [
+      {
+        "_id": "64abc123def789",
+        "firstName": "John",
+        "lastName": "Doe",
+        "age": 25,
+        "gender": "male",
+        "photoUrl": "https://example.com/photo.jpg",
+        "about": "A short bio",
+        "skills": ["JavaScript", "Node.js"]
+      }
+    ]
+  }
+  ```
 
 
 
