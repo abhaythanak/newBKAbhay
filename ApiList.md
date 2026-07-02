@@ -110,5 +110,70 @@ Clear the session cookie (`token`).
 * **Method:** `POST`
 * **Route:** `/logout`
 
+### 11. Review Connection Request
+Review (accept or reject) an incoming connection request.
+* **Method:** `POST`
+* **Route:** `/request/review/:status/:requestId`
+* **Route Params:**
+  * `status`: `accepted` or `rejected`
+  * `requestId`: MongoDB ID of the connection request to review
+* **Authentication:** Requires `token` Cookie
+* **Response Message:** `connection request <status>` (e.g. `connection request accepted`)
+
+### 12. Get Received Connection Requests
+Fetch connection requests received by the logged-in user that are still pending/interested.
+* **Method:** `GET`
+* **Route:** `/user/request/received`
+* **Authentication:** Requires `token` Cookie
+* **Response:**
+  ```json
+  {
+    "message": "Data fetch successfully",
+    "data": [
+      {
+        "_id": "64abc123def456",
+        "fromUserId": {
+          "_id": "64abc123def789",
+          "firstName": "John",
+          "lastName": "Doe",
+          "age": 25,
+          "gender": "male",
+          "photoUrl": "https://example.com/photo.jpg",
+          "about": "A short bio",
+          "skills": ["JavaScript", "Node.js"]
+        },
+        "toUserId": "64abc123def111",
+        "status": "interested",
+        "createdAt": "2026-07-01T10:00:00.000Z",
+        "updatedAt": "2026-07-01T10:00:00.000Z"
+      }
+    ]
+  }
+  ```
+
+### 13. Get User Connections
+Fetch the active connections of the logged-in user.
+* **Method:** `GET`
+* **Route:** `/user/connections`
+* **Authentication:** Requires `token` Cookie
+* **Response:**
+  ```json
+  {
+    "data": [
+      {
+        "_id": "64abc123def789",
+        "firstName": "John",
+        "lastName": "Doe",
+        "age": 25,
+        "gender": "male",
+        "photoUrl": "https://example.com/photo.jpg",
+        "about": "A short bio",
+        "skills": ["JavaScript", "Node.js"]
+      }
+    ]
+  }
+  ```
+
+
 
 
