@@ -102,7 +102,7 @@ Send a connection request (interested or ignore) to another user.
   * `status`: `ignore` or `interested`
   * `toUserId`: MongoDB ID of the target user
 * **Authentication:** Requires `token` Cookie
-* **Response Message:** `<fromUserFirstName>is<status>in<toUserFirstName>` (e.g. `JohnisinterestedinAlice`)
+* **Response Message:** `<fromUserFirstName> is <status> in <toUserFirstName>` (e.g. `John is interested in Alice`)
 * **Note:** Users cannot send connection requests to themselves (throws validation error).
 
 ### 10. Logout
@@ -128,7 +128,7 @@ Fetch connection requests received by the logged-in user that are still pending/
 * **Response:**
   ```json
   {
-    "message": "Data fetch successfully",
+    "message": "Data fetched successfully",
     "data": [
       {
         "_id": "64abc123def456",

@@ -1,9 +1,9 @@
-const mongoose = require("mongoose")
-const validator = require("validator")
-const jwt = require("jsonwebtoken")
-const bcrypt = require("bcrypt")
-// use validator for schema base validation
-const userModel = new mongoose.Schema(
+const mongoose = require("mongoose");
+const validator = require("validator");
+const bcrypt = require("bcrypt");
+const { signToken } = require("../../utils/token");
+
+const userSchema = new mongoose.Schema(
     {
         firstName: {
             type: String,
@@ -26,20 +26,19 @@ const userModel = new mongoose.Schema(
             required: true,
             validate(value) {
                 if (!validator.isStrongPassword(value)) {
-                    throw new Error("Enter Strong Password:" + value)
+                    throw new Error("Enter Strong Password: " + value);
                 }
             }
         },
         age: {
-            type: String,
+            type: Number,
             min: 18,
-
         },
         gender: {
             type: String,
             validate(value) {
                 if (!["male", "female", "others"].includes(value)) {
-                    throw new Error("Gender data is not valid")
+                    throw new Error("Gender data is not valid");
                 }
             }
         },
@@ -56,17 +55,16 @@ const userModel = new mongoose.Schema(
         }
     },
     { timestamps: true }
-)
+);
 
-userModel.methods.getJWT = async function () {
+userSchema.methods.getJWT = async function () {
     const user = this;
-    const token = await jwt.sign({ _id: user._id }, "Abhay@123", { expiresIn: "7d" })
-    return token
-}
-userModel.methods.validatePassword = async function(passwordInputByUser){
-    const user = this;
-    const isPasswordValid = await bcrypt.compare(passwordInputByUser, user.password);
-    return isPasswordValid;
-}
+    return signToken({ _id: user._id });
+};
 
-module.exports = mongoose.model("User", userModel)
+userSchema.methods.validatePassword = async function(passwordInputByUser) {
+    const user = this;
+    return await bcrypt.compare(passwordInputByUser, user.password);
+};
+
+module.exports = mongoose.model("User", userSchema);
