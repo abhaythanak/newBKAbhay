@@ -42,7 +42,7 @@ JWT_SECRET=your_jwt_secret
 
 > ⚠️ Never commit your `.env` file. It is already included in `.gitignore`.
 
-> ⚠️ **Note:** The current `src/config/database.js` has the MongoDB URI **hardcoded** in the source. Move it to `.env` and use `process.env.MONGO_URI` before going to production.
+> 💡 **Note:** The server loads variables from `.env` via `src/config/env.js`. If you do not specify them, it falls back to default values (including a development database cluster).
 
 ---
 
@@ -71,22 +71,25 @@ The server will start on **http://localhost:5555**
 ```
 newBKAbhay/
 ├── src/
-│   ├── app.js                  # Express app entry point — connects DB, loads routers, starts server
-│   ├── auth.js                 # Old auth placeholder (hardcoded token — superseded by middlewares/auth.js)
+│   ├── app.js                  # Express app setup (loads routes, registers central middlewares)
+│   ├── server.js               # Starts the database connection and the HTTP server
 │   ├── config/
-│   │   └── database.js         # Mongoose connection setup
+│   │   ├── database.js         # Mongoose connection setup using env config
+│   │   └── env.js              # Centralized environment variable validation
 │   ├── middlewares/
-│   │   └── auth.js             # JWT auth middleware — verifies token cookie, attaches user to req.user
-│   ├── models/
-│   │   └── user.js             # Mongoose User model/schema + getJWT() & validatePassword() instance methods
-│   ├── routers/
-│   │   ├── auth.js             # Auth router (signup, login, logout)
-│   │   ├── feed.js             # Feed router (feed API)
-│   │   ├── profile.js          # Profile router (view profile)
-│   │   ├── request.js          # Request router (connection requests)
-│   │   └── user.js             # User CRUD router (get, update, delete user)
-│   └── utils/
-│       └── validation.js       # Input validation helpers (validateSignupData)
+│   │   ├── auth.middleware.js  # JWT auth middleware (verifies token, attaches req.user)
+│   │   ├── error.middleware.js # Global centralized error handler
+│   │   └── notFound.middleware.js # Catch-all 404 handler for unknown routes
+│   ├── utils/
+│   │   ├── ApiError.js         # Standard HTTP operational errors class
+│   │   ├── asyncHandler.js     # Express async error handling wrapper
+│   │   └── token.js            # JWT sign & verify helpers
+│   └── modules/                # Feature modules (modular monolith architecture)
+│       ├── auth/               # Signup, login, logout routes/controllers/services/schemas
+│       ├── connectionRequests/ # Connection requests models/routes/controllers/services/schemas
+│       ├── feed/               # Feed routes/controllers/services/schemas
+│       ├── profiles/           # Profile view & edit routes/controllers/services/schemas
+│       └── users/              # User connection list, updates & search routes/controllers/services/schemas
 ├── .env                        # Environment variables (not committed)
 ├── .gitignore                  # Git ignored files
 ├── package.json                # Project metadata & scripts
@@ -100,16 +103,15 @@ newBKAbhay/
 
 ## 🔗 API Routes
 
-### `POST /signup` (Defined in `src/routers/auth.js`)
+### `POST /signup` (Defined in `src/modules/auth/auth.routes.js`)
 
 Creates a new user from the JSON request body and saves it to the database.
 
 **Signup flow:**
-1. **Validate input** — `validateSignupData()` from `src/utils/validation.js` checks that the name is present, the email is a valid format, and the password is strong.
-2. **Hash password** — The plaintext password is hashed with `bcrypt` (10 salt rounds) before being stored.
-3. **Save user** — A new `User` document is created with the hashed password and saved to MongoDB.
-
-> ⚠️ The duplicate `emailId` check is currently **commented out** in `src/routers/auth.js` — an `existingUser` lookup is performed but the guard block is disabled. The `emailId` field is marked `unique` in the Mongoose schema, so MongoDB will still reject duplicates with a `500` error. Uncomment the guard block to return a clean `400` response instead.
+1. **Validate input** — `validateSignupData()` from `src/modules/auth/auth.schema.js` checks that the name is present, the email is a valid format, and the password is strong.
+2. **Check duplicate email** — `auth.service.js` does a lookup for existing emails and returns a clean `400` response if a duplicate is found.
+3. **Hash password** — The plaintext password is hashed with `bcrypt` (10 salt rounds) before being stored.
+4. **Save user** — A new `User` document is created with the hashed password and saved to MongoDB.
 
 
 > ⚠️ **Password strength** is validated in two places: by `validator.isStrongPassword()` in `validateSignupData` (before hashing), and also by the schema-level `validate()` in `user.js` (applied on save/update). Weak passwords throw an error immediately.
@@ -152,7 +154,7 @@ fetch('http://localhost:5555/signup', {
 
 ---
 
-### `POST /login` (Defined in `src/routers/auth.js`)
+### `POST /login` (Defined in `src/modules/auth/auth.routes.js`)
 
 Authenticates an existing user by verifying their email and password.
 
@@ -175,7 +177,7 @@ Authenticates an existing user by verifying their email and password.
 - `401 Unauthorized` — `{ "message": "Invalid email or password" }`
 - `400 Bad Request` — `{ "message": "Error saving user", "error": "..." }` (e.g. user not found)
 
-> ⚠️ The JWT is currently signed with a **hardcoded secret** (`"Abhay@123"`) inside `user.getJWT()`. Move this secret to an environment variable (`process.env.JWT_SECRET`) before going to production.
+> 💡 **Note:** The JWT secret is loaded from environment configuration (`src/config/env.js`) and signed via the centralized token helper.
 
 > ℹ️ **Token lifetime:** JWT is valid for **7 days** (`expiresIn: "7d"`). The `token` cookie itself expires after **8 hours** (`Date.now() + 8 * 3600000`) — the cookie will be cleared from the browser before the JWT itself expires.
 
@@ -193,7 +195,7 @@ fetch('http://localhost:5555/login', {
 
 ---
 
-### `POST /logout` (Defined in `src/routers/auth.js`)
+### `POST /logout` (Defined in `src/modules/auth/auth.routes.js`)
 
 Logs out the user by clearing their session cookie.
 
@@ -213,7 +215,7 @@ fetch('http://localhost:5555/logout', {
 
 ---
 
-### `GET /user` (Defined in `src/routers/user.js`)
+### `GET /user` (Defined in `src/modules/users/user.routes.js`)
 
 Fetches a single user by `emailId` from the request body.
 
@@ -240,7 +242,7 @@ fetch('http://localhost:5555/user', {
 
 ---
 
-### `GET /feed` (Defined in `src/routers/feed.js`)
+### `GET /feed` (Defined in `src/modules/feed/feed.routes.js`)
 
 Fetches **all users** from the database. No request body required.
 
@@ -255,7 +257,7 @@ fetch('http://localhost:5555/feed');
 
 ---
 
-### `DELETE /user` (Defined in `src/routers/user.js`)
+### `DELETE /user` (Defined in `src/modules/users/user.routes.js`)
 
 Deletes a user from the database by `userId` from the request body.
 
@@ -282,11 +284,11 @@ fetch('http://localhost:5555/user', {
 
 ---
 
-### `GET /profile/view` (Defined in `src/routers/profile.js`)
+### `GET /profile/view` (Defined in `src/modules/profiles/profile.routes.js`)
 
 A **protected route** — returns the authenticated user's full profile from the database.
 
-**Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.js`). Requires a valid `token` JWT cookie (set during `/login`).
+**Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.middleware.js`). Requires a valid `token` JWT cookie (set during `/login`).
 
 **Profile flow:**
 1. `userAuth` middleware reads the `token` cookie and verifies the JWT.
@@ -304,18 +306,16 @@ fetch('http://localhost:5555/profile/view', {
 });
 ```
 
-> ⚠️ The JWT secret is currently **hardcoded** as `"Abhay@123"` in `middlewares/auth.js`. Move it to `process.env.JWT_SECRET` before deploying to production.
-
 ---
 
-### `PATCH /profile/edit` (Defined in `src/routers/profile.js`)
+### `PATCH /profile/edit` (Defined in `src/modules/profiles/profile.routes.js`)
 
 A **protected route** — updates the authenticated user's profile data. Only allowed fields are accepted for editing: `firstName`, `lastName`, `emailId`, `photoUrl`, `about`, `age`, and `skills`.
 
-**Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.js`). Requires a valid `token` JWT cookie.
+**Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.middleware.js`). Requires a valid `token` JWT cookie.
 
 **Edit flow:**
-1. **Validate input** — `validateEditProfileData(req)` from `src/utils/validation.js` checks that only allowed fields are present in the request body.
+1. **Validate input** — `validateEditProfileData(req.body)` from `src/modules/profiles/profile.schema.js` checks that only allowed fields are present in the request body.
 2. **Update user** — Updates the fields on the logged-in user document and saves it back to MongoDB, running Mongoose validators.
 
 **Request Body (JSON):**
@@ -349,11 +349,11 @@ fetch('http://localhost:5555/profile/edit', {
 
 ---
 
-### `POST /request/send/:status/:toUserId` (Defined in `src/routers/request.js`)
+### `POST /request/send/:status/:toUserId` (Defined in `src/modules/connectionRequests/connectionRequest.routes.js`)
 
 A **protected route** — sends a connection request (either `"interested"` or `"ignore"`) to another user.
 
-**Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.js`). Requires a valid `token` JWT cookie.
+**Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.middleware.js`). Requires a valid `token` JWT cookie.
 
 **Route Parameters:**
 - `status` (String): Must be either `"ignore"` or `"interested"`.
@@ -373,11 +373,11 @@ fetch('http://localhost:5555/request/send/interested/64abc123def456', {
 
 ---
 
-### `POST /request/review/:status/:requestId` (Defined in `src/routers/request.js`)
+### `POST /request/review/:status/:requestId` (Defined in `src/modules/connectionRequests/connectionRequest.routes.js`)
 
 A **protected route** — reviews (accepts or rejects) an incoming connection request.
 
-**Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.js`). Requires a valid `token` JWT cookie.
+**Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.middleware.js`). Requires a valid `token` JWT cookie.
 
 **Route Parameters:**
 - `status` (String): Must be either `"accepted"` or `"rejected"`.
@@ -398,11 +398,11 @@ fetch('http://localhost:5555/request/review/accepted/64abc123def456', {
 
 ---
 
-### `GET /user/request/received` (Defined in `src/routers/user.js`)
+### `GET /user/request/received` (Defined in `src/modules/users/user.routes.js`)
 
 A **protected route** — fetches all pending/interested connection requests received by the logged-in user. It automatically populates the sender's (`fromUserId`) details.
 
-**Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.js`). Requires a valid `token` JWT cookie.
+**Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.middleware.js`). Requires a valid `token` JWT cookie.
 
 **Response:**
 - `200 OK` — `{ "message": "Data fetch successfully", "data": [ ...connectionRequestsWithSenderDetails ] }`
@@ -418,11 +418,11 @@ fetch('http://localhost:5555/user/request/received', {
 
 ---
 
-### `GET /user/connections` (Defined in `src/routers/user.js`)
+### `GET /user/connections` (Defined in `src/modules/users/user.routes.js`)
 
 A **protected route** — fetches the active connections (where status is `"accepted"`) of the logged-in user. Only safe fields (`firstName`, `lastName`, `age`, `gender`, `photoUrl`, `about`, `skills`) are returned for the connected users.
 
-**Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.js`). Requires a valid `token` JWT cookie.
+**Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.middleware.js`). Requires a valid `token` JWT cookie.
 
 **Response:**
 - `200 OK` — `{ "data": [ { "_id", "firstName", "lastName", "age", "gender", "photoUrl", "about", "skills" } ] }`
@@ -439,7 +439,7 @@ fetch('http://localhost:5555/user/connections', {
 
 ---
 
-### `PATCH /user` (Defined in `src/routers/user.js`)
+### `PATCH /user` (Defined in `src/modules/users/user.routes.js`)
 
 Updates an existing user's data by `userId`. Pass any fields to update along with the `userId`. Validators are run on update (`runValidators: true`).
 
@@ -471,7 +471,7 @@ fetch('http://localhost:5555/user', {
 
 ## 👤 User Model
 
-`src/models/user.js` defines the Mongoose schema for a user document. The schema includes `timestamps: true`, so each document automatically gets `createdAt` and `updatedAt` fields.
+`src/modules/users/user.model.js` defines the Mongoose schema for a user document. The schema includes `timestamps: true`, so each document automatically gets `createdAt` and `updatedAt` fields.
 
 | Field       | Type       | Required | Constraints / Default                                                                            |
 |-------------|------------|----------|--------------------------------------------------------------------------------------------------|
@@ -518,7 +518,7 @@ userModel.methods.validatePassword = async function (passwordInputByUser) {
 
 ## 🤝 Connection Request Model
 
-`src/models/connectionRequest.js` defines the Mongoose schema for a connection request document. The schema includes `timestamps: true` and a pre-save validation hook.
+`src/modules/connectionRequests/connectionRequest.model.js` defines the Mongoose schema for a connection request document. The schema includes `timestamps: true` and a pre-save validation hook.
 
 | Field        | Type                            | Required | Constraints / Default                                                 |
 |--------------|---------------------------------|----------|-----------------------------------------------------------------------|
@@ -538,34 +538,22 @@ A compound index is defined on both `fromUserId` and `toUserId` to speed up data
 #### Pre-Save Hook (`save`)
 A pre-save hook validates that users cannot send a connection request to themselves. If `fromUserId` equals `toUserId`, it throws an error: `"cannot send request to self"`.
 
----
+## 🛡️ Validation Schemas
 
-## 🛡️ Validation Utility
+Validation logic is modularized and lives within each feature's `*.schema.js` file:
 
-`src/utils/validation.js` exports helper functions for validating request data.
+- **[auth.schema.js](file:///Users/ada/Desktop/BackendL/src/modules/auth/auth.schema.js)**: Validates signup/login data (e.g. email formats, name limits, strong passwords).
+- **[profile.schema.js](file:///Users/ada/Desktop/BackendL/src/modules/profiles/profile.schema.js)**: Validates edit fields (`firstName`, `photoUrl`, `skills`, etc.) ensuring only allowed attributes are accepted.
+- **[user.schema.js](file:///Users/ada/Desktop/BackendL/src/modules/users/user.schema.js)**: Validates admin updates, search query email formats, and object ID requirements.
+- **[connectionRequest.schema.js](file:///Users/ada/Desktop/BackendL/src/modules/connectionRequests/connectionRequest.schema.js)**: Enforces validation on status transitions (`ignore`/`interested` for send, `accepted`/`rejected` for review) and correct MongoDB ObjectId formats.
 
-### `validateSignupData(req)`
-
-Validates the signup request body and **throws an Error** if any check fails (caught by the route's `try/catch`):
-
-| Check    | Condition                                              | Error thrown                        |
-|----------|--------------------------------------------------------|-------------------------------------|
-| Name     | `firstName` or `lastName` must be present              | `"Name is not valid!"`              |
-| Email    | Must be a valid email format (`validator.isEmail`)     | `"Email is not valid"`              |
-| Password | Must pass `validator.isStrongPassword`                 | `"Please enter the strong Password"`|
-
-```js
-const { validateSignupData } = require('./utils/validation');
-
-// Used at the top of the /signup handler
-validateSignupData(req); // throws on invalid input
-```
+Validation check methods throw plain standard errors that are caught by controller `asyncHandler` wrappers and formatted cleanly by the global error middleware.
 
 ---
 
 ## 🔐 Authentication
 
-### `userAuth` Middleware (`src/middlewares/auth.js`)
+### `userAuth` Middleware (`src/middlewares/auth.middleware.js`)
 
 All protected routes use the `userAuth` middleware, which handles JWT verification and user lookup:
 
@@ -587,12 +575,12 @@ router.get('/profile/view', userAuth, async (req, res) => {
 ```
 
 **Currently protected routes:**
-- `GET /profile/view` (Defined in `src/routers/profile.js`) — uses `userAuth`
-- `PATCH /profile/edit` (Defined in `src/routers/profile.js`) — uses `userAuth`
-- `POST /request/send/:status/:toUserId` (Defined in `src/routers/request.js`) — uses `userAuth`
+- `GET /profile/view` (Defined in `src/modules/profiles/profile.routes.js`) — uses `userAuth`
+- `PATCH /profile/edit` (Defined in `src/modules/profiles/profile.routes.js`) — uses `userAuth`
+- `POST /request/send/:status/:toUserId` (Defined in `src/modules/connectionRequests/connectionRequest.routes.js`) — uses `userAuth`
 
 
-> ⚠️ The JWT secret is currently **hardcoded** as `"Abhay@123"` in `middlewares/auth.js`. Move it to an environment variable (`process.env.JWT_SECRET`) before going to production.
+> 💡 **Note:** The JWT secret is loaded from environment configuration (`src/config/env.js`).
 
 ### JWT Signing (`user.getJWT()`)
 
@@ -610,10 +598,6 @@ Password comparison has been moved out of `app.js` and into the **User model ins
 ```js
 const isPasswordValid = await user.validatePassword(password);
 ```
-
-### Legacy placeholder (`src/auth.js`)
-
-`src/auth.js` still exists but uses a **hardcoded token** (`'xyz'`) and is **not wired to any route**. It has been superseded by `src/middlewares/auth.js`.
 
 ---
 
