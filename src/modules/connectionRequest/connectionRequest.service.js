@@ -1,5 +1,5 @@
 const ConnectionRequest = require("./connectionRequest.model");
-const User = require("../users/user.model");
+const User = require("../user/user.model");
 const ApiError = require("../../utils/ApiError");
 
 const sendRequest = async (fromUserId, toUserId, status) => {

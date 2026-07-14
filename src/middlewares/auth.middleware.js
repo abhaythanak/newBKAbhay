@@ -1,5 +1,5 @@
 const { verifyToken } = require("../utils/token");
-const User = require("../modules/users/user.model");
+const User = require("../modules/user/user.model");
 const ApiError = require("../utils/ApiError");
 const asyncHandler = require("../utils/asyncHandler");
 
@@ -21,6 +21,7 @@ const userAuth = asyncHandler(async (req, res, next) => {
         req.user = user;
         next();
     } catch (err) {
+        if (err instanceof ApiError) throw err;
         throw new ApiError(401, "Token is not valid or expired");
     }
 });
