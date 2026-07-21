@@ -1,13 +1,20 @@
 # DevTinder API List
 
-A simple checklist and usage guide for the available API endpoints.
-All Time Think About Corner Cases(Edge Cases)
+A simple checklist and usage guide for the available API endpoints in **DevTinder**.  
+All API endpoints are mounted with the `/api/v1` base route prefix.
+
+---
+
+### Base URL
+`http://localhost:5555/api/v1`
+
 ---
 
 ### 1. Signup
 Create a new user account.
 * **Method:** `POST`
-* **Route:** `/signup`
+* **Route:** `/api/v1/signup`
+* **Authentication:** None
 * **Request Body:**
   ```json
   {
@@ -17,11 +24,26 @@ Create a new user account.
     "password": "Password123!"
   }
   ```
+* **Response:**
+  `201 Created`
+  ```json
+  {
+    "message": "User created successfully",
+    "user": {
+      "firstName": "John",
+      "lastName": "Doe",
+      "emailId": "john@example.com"
+    }
+  }
+  ```
+
+---
 
 ### 2. Login
 Authenticate and receive a session cookie (`token`).
 * **Method:** `POST`
-* **Route:** `/login`
+* **Route:** `/api/v1/login`
+* **Authentication:** None
 * **Request Body:**
   ```json
   {
@@ -29,103 +51,113 @@ Authenticate and receive a session cookie (`token`).
     "password": "Password123!"
   }
   ```
+* **Response:**
+  `200 OK` (Sets `token` HTTP-only cookie)
+  ```json
+  {
+    "message": "Login successful",
+    "user": {
+      "firstName": "John",
+      "lastName": "Doe",
+      "emailId": "john@example.com"
+    }
+  }
+  ```
 
-### 3. Get Profile
+---
+
+### 3. Logout
+Clear the session cookie (`token`).
+* **Method:** `POST`
+* **Route:** `/api/v1/logout`
+* **Authentication:** None (clears `token` cookie)
+* **Response:**
+  `200 OK` — `"logout Successully!!!."`
+
+---
+
+### 4. Get Profile
 Get the logged-in user's profile info.
 * **Method:** `GET`
-* **Route:** `/profile/view`
-* **Authentication:** Requires `token` Cookie
+* **Route:** `/api/v1/profile/view`
+* **Authentication:** Requires `token` Cookie (`userAuth`)
+* **Response:**
+  `200 OK` — Returns full logged-in user object
 
-### 4. Edit Profile
-Edit the logged-in user's profile info.
+---
+
+### 5. Edit Profile
+Edit the logged-in user's profile info. Allowed fields: `firstName`, `lastName`, `emailId`, `photoUrl`, `about`, `age`, `skills`.
 * **Method:** `PATCH`
-* **Route:** `/profile/edit`
-* **Authentication:** Requires `token` Cookie
+* **Route:** `/api/v1/profile/edit`
+* **Authentication:** Requires `token` Cookie (`userAuth`)
 * **Request Body:**
   ```json
   {
     "firstName": "John",
     "lastName": "Doe",
-    "emailId": "john@example.com",
     "photoUrl": "https://example.com/photo.jpg",
     "about": "A short bio",
     "age": 25,
     "skills": ["JavaScript", "Node.js"]
   }
   ```
-
-### 5. Get User Details
-Fetch details of a user by email ID.
-* **Method:** `GET`
-* **Route:** `/user`
-* **Request Body:**
+* **Response:**
+  `200 OK`
   ```json
   {
-    "emailId": "john@example.com"
+    "message": "John, your profile updated successfully!!",
+    "data": { ...updatedUser }
   }
   ```
 
-### 6. Feed
-Get all registered users.
-* **Method:** `GET`
-* **Route:** `/feed`
+---
 
-### 7. Update User
-Update information for an existing user.
-* **Method:** `PATCH`
-* **Route:** `/user`
-* **Request Body:**
-  ```json
-  {
-    "userId": "user_mongodb_id",
-    "firstName": "UpdatedFirstName",
-    "skills": ["JavaScript", "Node.js"]
-  }
-  ```
-
-### 8. Delete User
-Delete a user record by ID.
-* **Method:** `DELETE`
-* **Route:** `/user`
-* **Request Body:**
-  ```json
-  {
-    "userId": "user_mongodb_id"
-  }
-  ```
-
-### 9. Send Connection Request
-Send a connection request (interested or ignore) to another user.
+### 6. Send Connection Request
+Send a connection request (`interested` or `ignore`) to another user.
 * **Method:** `POST`
-* **Route:** `/request/send/:status/:toUserId`
+* **Route:** `/api/v1/request/send/:status/:toUserId`
 * **Route Params:**
   * `status`: `ignore` or `interested`
-  * `toUserId`: MongoDB ID of the target user
-* **Authentication:** Requires `token` Cookie
-* **Response Message:** `<fromUserFirstName> is <status> in <toUserFirstName>` (e.g. `John is interested in Alice`)
-* **Note:** Users cannot send connection requests to themselves (throws validation error).
+  * `toUserId`: MongoDB ObjectId of target user
+* **Authentication:** Requires `token` Cookie (`userAuth`)
+* **Response:**
+  `200 OK`
+  ```json
+  {
+    "message": "John is interested in Alice",
+    "data": { ...connectionRequest }
+  }
+  ```
 
-### 10. Logout
-Clear the session cookie (`token`).
-* **Method:** `POST`
-* **Route:** `/logout`
+---
 
-### 11. Review Connection Request
-Review (accept or reject) an incoming connection request.
+### 7. Review Connection Request
+Review (`accepted` or `rejected`) an incoming connection request.
 * **Method:** `POST`
-* **Route:** `/request/review/:status/:requestId`
+* **Route:** `/api/v1/request/review/:status/:requestId`
 * **Route Params:**
   * `status`: `accepted` or `rejected`
-  * `requestId`: MongoDB ID of the connection request to review
-* **Authentication:** Requires `token` Cookie
-* **Response Message:** `connection request <status>` (e.g. `connection request accepted`)
-
-### 12. Get Received Connection Requests
-Fetch connection requests received by the logged-in user that are still pending/interested.
-* **Method:** `GET`
-* **Route:** `/user/request/received`
-* **Authentication:** Requires `token` Cookie
+  * `requestId`: MongoDB ObjectId of connection request
+* **Authentication:** Requires `token` Cookie (`userAuth`)
 * **Response:**
+  `200 OK`
+  ```json
+  {
+    "message": "connection request accepted",
+    "data": { ...connectionRequest }
+  }
+  ```
+
+---
+
+### 8. Get Received Connection Requests
+Fetch connection requests received by the logged-in user that are pending (`interested`).
+* **Method:** `GET`
+* **Route:** `/api/v1/user/request/received`
+* **Authentication:** Requires `token` Cookie (`userAuth`)
+* **Response:**
+  `200 OK`
   ```json
   {
     "message": "Data fetched successfully",
@@ -143,20 +175,21 @@ Fetch connection requests received by the logged-in user that are still pending/
           "skills": ["JavaScript", "Node.js"]
         },
         "toUserId": "64abc123def111",
-        "status": "interested",
-        "createdAt": "2026-07-01T10:00:00.000Z",
-        "updatedAt": "2026-07-01T10:00:00.000Z"
+        "status": "interested"
       }
     ]
   }
   ```
 
-### 13. Get User Connections
-Fetch the active connections of the logged-in user.
+---
+
+### 9. Get User Connections
+Fetch active connections (`accepted`) of the logged-in user.
 * **Method:** `GET`
-* **Route:** `/user/connections`
-* **Authentication:** Requires `token` Cookie
+* **Route:** `/api/v1/user/connections`
+* **Authentication:** Requires `token` Cookie (`userAuth`)
 * **Response:**
+  `200 OK`
   ```json
   {
     "data": [
@@ -174,6 +207,62 @@ Fetch the active connections of the logged-in user.
   }
   ```
 
+---
 
+### 10. Feed
+Get potential user matches for the logged-in user feed.
+* **Method:** `GET`
+* **Route:** `/api/v1/feed`
+* **Authentication:** Requires `token` Cookie (`userAuth`)
+* **Response:**
+  `200 OK` — Array of user profile cards
 
+---
 
+### 11. Get User Details
+Fetch user profile details by email ID.
+* **Method:** `GET`
+* **Route:** `/api/v1/user`
+* **Authentication:** Requires `token` Cookie (`userAuth`)
+* **Request Body:**
+  ```json
+  {
+    "emailId": "john@example.com"
+  }
+  ```
+* **Response:**
+  `200 OK` — Matched user object
+
+---
+
+### 12. Update User
+Update details of an existing user record by `userId`.
+* **Method:** `PATCH`
+* **Route:** `/api/v1/user`
+* **Authentication:** Requires `token` Cookie (`userAuth`)
+* **Request Body:**
+  ```json
+  {
+    "userId": "user_mongodb_id",
+    "firstName": "UpdatedFirstName",
+    "skills": ["JavaScript", "Node.js"]
+  }
+  ```
+* **Response:**
+  `201 Created` — `"user updated successfully"`
+
+---
+
+### 13. Delete User
+Delete a user record by ID.
+* **Method:** `DELETE`
+* **Route:** `/api/v1/user`
+* **Authentication:** Requires `token` Cookie (`userAuth`)
+* **Request Body:**
+  ```json
+  {
+    "userId": "user_mongodb_id"
+  }
+  ```
+* **Response:**
+  `201 Created` — `"UserDeleted Successfully"`

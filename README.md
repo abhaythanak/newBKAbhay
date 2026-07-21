@@ -1,6 +1,6 @@
 # newBKAbhay
 
-A **Node.js + Express 5** backend server connected to a **MongoDB** database via Mongoose, featuring user signup with **input validation**, **bcrypt password hashing**, **JWT-based cookie authentication**, and full CRUD functionality for user management.
+A **Node.js + Express 5** backend server connected to a **MongoDB** database via Mongoose, featuring user signup with **input validation**, **bcrypt password hashing**, **JWT-based cookie authentication**, and full CRUD functionality for user management and connection requests.
 
 ---
 
@@ -33,16 +33,17 @@ npm install
 
 ### 3. Set up environment variables
 
-Create a `.env` file in the root directory and add your MongoDB connection string:
+Create a `.env` file in the root directory:
 
 ```env
+PORT=5555
 MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret
 ```
 
 > ⚠️ Never commit your `.env` file. It is already included in `.gitignore`.
 
-> 💡 **Note:** The server loads variables from `.env` via `src/config/env.js`. If you do not specify them, it falls back to default values (including a development database cluster).
+> 💡 **Note:** The server loads variables from `.env` via [src/config/env.js](file:///Users/ada/Desktop/BackendL/src/config/env.js).
 
 ---
 
@@ -60,9 +61,9 @@ npm run dev
 npm start
 ```
 
-> Both `npm start` and `npm run dev` use **nodemon** to auto-reload on file changes.
+> Both `npm start` and `npm run dev` start the server via [src/server.js](file:///Users/ada/Desktop/BackendL/src/server.js).
 
-The server will start on **http://localhost:5555**
+The server will start on **http://localhost:5555** (or the `PORT` specified in `.env`).
 
 ---
 
@@ -71,50 +72,72 @@ The server will start on **http://localhost:5555**
 ```
 newBKAbhay/
 ├── src/
-│   ├── app.js                  # Express app setup (loads routes, registers central middlewares)
-│   ├── server.js               # Starts the database connection and the HTTP server
+│   ├── app.js                              # Express app setup (loads /api/v1 routes & central middlewares)
+│   ├── server.js                           # Connects database & starts HTTP server
 │   ├── config/
-│   │   ├── database.js         # Mongoose connection setup using env config
-│   │   └── env.js              # Centralized environment variable validation
+│   │   ├── database.js                     # Mongoose connection setup
+│   │   └── env.js                          # Centralized environment variable export
 │   ├── middlewares/
-│   │   ├── auth.middleware.js  # JWT auth middleware (verifies token, attaches req.user)
-│   │   ├── error.middleware.js # Global centralized error handler
-│   │   └── notFound.middleware.js # Catch-all 404 handler for unknown routes
+│   │   ├── auth.middleware.js              # JWT auth middleware (verifies token cookie, attaches req.user)
+│   │   ├── error.middleware.js             # Global centralized error handler
+│   │   └── notFound.middleware.js          # Catch-all 404 handler for unknown routes
 │   ├── utils/
-│   │   ├── ApiError.js         # Standard HTTP operational errors class
-│   │   ├── asyncHandler.js     # Express async error handling wrapper
-│   │   └── token.js            # JWT sign & verify helpers
-│   └── modules/                # Feature modules (modular monolith architecture)
-│       ├── auth/               # Signup, login, logout routes/controllers/services/schemas
-│       ├── connectionRequests/ # Connection requests models/routes/controllers/services/schemas
-│       ├── feed/               # Feed routes/controllers/services/schemas
-│       ├── profiles/           # Profile view & edit routes/controllers/services/schemas
-│       └── users/              # User connection list, updates & search routes/controllers/services/schemas
-├── .env                        # Environment variables (not committed)
-├── .gitignore                  # Git ignored files
-├── package.json                # Project metadata & scripts
-└── README.md                   # Project documentation
+│   │   ├── ApiError.js                     # Custom HTTP operational error class
+│   │   ├── asyncHandler.js                 # Express async error handler wrapper
+│   │   └── token.js                        # JWT sign & verify helpers
+│   └── modules/                            # Feature modules (modular monolith architecture)
+│       ├── auth/                           # Signup, login & logout
+│       │   ├── auth.controller.js
+│       │   ├── auth.routes.js
+│       │   ├── auth.schema.js
+│       │   └── auth.service.js
+│       ├── connectionRequest/              # Connection request model, routes & services
+│       │   ├── connectionRequest.controller.js
+│       │   ├── connectionRequest.model.js
+│       │   ├── connectionRequest.routes.js
+│       │   ├── connectionRequest.schema.js
+│       │   └── connectionRequest.service.js
+│       ├── feed/                           # Feed module
+│       │   ├── feed.controller.js
+│       │   ├── feed.routes.js
+│       │   ├── feed.schema.js
+│       │   └── feed.service.js
+│       ├── profile/                        # User profile view & edit
+│       │   ├── profile.controller.js
+│       │   ├── profile.routes.js
+│       │   ├── profile.schema.js
+│       │   └── profile.service.js
+│       └── user/                           # User model & user operations
+│           ├── user.controller.js
+│           ├── user.model.js
+│           ├── user.routes.js
+│           ├── user.schema.js
+│           └── user.service.js
+├── .env                                    # Environment variables (not committed)
+├── .env.example                            # Example environment variables template
+├── .gitignore                              # Git ignored files
+├── ApiList.md                              # API list checklist
+├── package.json                            # Project metadata & dependencies
+└── README.md                               # Project documentation
 ```
 
-> Middlewares used: `express.json()` for JSON body parsing and `cookie-parser` for reading/writing HTTP cookies.
-
+> **Base Route Prefix:** All API endpoints are registered under `/api/v1` in [src/app.js](file:///Users/ada/Desktop/BackendL/src/app.js).
 
 ---
 
 ## 🔗 API Routes
 
-### `POST /signup` (Defined in `src/modules/auth/auth.routes.js`)
+All endpoints below are prefixed with `/api/v1`.
 
-Creates a new user from the JSON request body and saves it to the database.
+### `POST /api/v1/signup` (Defined in [auth.routes.js](file:///Users/ada/Desktop/BackendL/src/modules/auth/auth.routes.js))
+
+Creates a new user account with hashed password and input validation.
 
 **Signup flow:**
-1. **Validate input** — `validateSignupData()` from `src/modules/auth/auth.schema.js` checks that the name is present, the email is a valid format, and the password is strong.
-2. **Check duplicate email** — `auth.service.js` does a lookup for existing emails and returns a clean `400` response if a duplicate is found.
-3. **Hash password** — The plaintext password is hashed with `bcrypt` (10 salt rounds) before being stored.
-4. **Save user** — A new `User` document is created with the hashed password and saved to MongoDB.
-
-
-> ⚠️ **Password strength** is validated in two places: by `validator.isStrongPassword()` in `validateSignupData` (before hashing), and also by the schema-level `validate()` in `user.js` (applied on save/update). Weak passwords throw an error immediately.
+1. **Validate input** — `validateSignupData()` from [auth.schema.js](file:///Users/ada/Desktop/BackendL/src/modules/auth/auth.schema.js) checks required fields, email format, and password strength.
+2. **Check duplicate email** — `auth.service.js` verifies if the email is already registered.
+3. **Hash password** — Password is hashed using `bcrypt` (10 salt rounds).
+4. **Save user** — Saves new User document in MongoDB.
 
 **Request Body (JSON):**
 
@@ -132,36 +155,20 @@ Creates a new user from the JSON request body and saves it to the database.
 }
 ```
 
-> `firstName` (or `lastName`), `emailId`, and `password` are required. The password is **never stored in plaintext** — it is bcrypt-hashed before saving.
-
 **Response:**
 - `201 Created` — `{ "message": "User created successfully", "user": { ... } }`
-- `500 Internal Server Error` — `{ "message": "Error saving user", "error": "..." }`
-
-```js
-// Example usage
-fetch('http://localhost:5555/signup', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    firstName: 'John',
-    lastName: 'Doe',
-    emailId: 'john@example.com',
-    password: 'StrongPass@123'
-  })
-});
-```
+- `400 Bad Request` — Validation or duplicate email error
 
 ---
 
-### `POST /login` (Defined in `src/modules/auth/auth.routes.js`)
+### `POST /api/v1/login` (Defined in [auth.routes.js](file:///Users/ada/Desktop/BackendL/src/modules/auth/auth.routes.js))
 
-Authenticates an existing user by verifying their email and password.
+Authenticates a user and sets an HTTP-only JWT cookie (`token`).
 
 **Login flow:**
-1. Look up the user by `emailId` — throw `"Invalid Credential"` if not found.
-2. Compare the submitted password against the stored **bcrypt hash** using the `user.validatePassword(password)` instance method (defined on the User model).
-3. On success, call `user.getJWT()` (instance method on the User model) to sign a **JWT** token with the user's `_id`, set to expire in **7 days**, and set it as a `token` cookie that expires in **8 hours**.
+1. Look up user by `emailId`.
+2. Compare submitted password using `user.validatePassword(password)`.
+3. Sign JWT token via `user.getJWT()` and attach `token` cookie (expires in 8 hours).
 
 **Request Body (JSON):**
 
@@ -173,486 +180,242 @@ Authenticates an existing user by verifying their email and password.
 ```
 
 **Response:**
-- `200 OK` — Sets `token` JWT cookie; returns `{ "message": "Login successful", "user": { "firstName", "lastName", "emailId" } }`
-- `401 Unauthorized` — `{ "message": "Invalid email or password" }`
-- `400 Bad Request` — `{ "message": "Error saving user", "error": "..." }` (e.g. user not found)
-
-> 💡 **Note:** The JWT secret is loaded from environment configuration (`src/config/env.js`) and signed via the centralized token helper.
-
-> ℹ️ **Token lifetime:** JWT is valid for **7 days** (`expiresIn: "7d"`). The `token` cookie itself expires after **8 hours** (`Date.now() + 8 * 3600000`) — the cookie will be cleared from the browser before the JWT itself expires.
-
-```js
-// Example usage
-fetch('http://localhost:5555/login', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    emailId: 'john@example.com',
-    password: 'StrongPass@123'
-  })
-});
-```
+- `200 OK` — Sets `token` cookie; returns `{ "message": "Login successful", "user": { "firstName", "lastName", "emailId" } }`
+- `401 Unauthorized` — Invalid credentials
 
 ---
 
-### `POST /logout` (Defined in `src/modules/auth/auth.routes.js`)
+### `POST /api/v1/logout` (Defined in [auth.routes.js](file:///Users/ada/Desktop/BackendL/src/modules/auth/auth.routes.js))
 
-Logs out the user by clearing their session cookie.
-
-**Logout flow:**
-1. Clear the `token` cookie by setting it to `null` and setting the expiry date to the current timestamp.
+Clears the `token` session cookie.
 
 **Response:**
 - `200 OK` — `"logout Successully!!!."`
 
-```js
-// Example usage
-fetch('http://localhost:5555/logout', {
-  method: 'POST',
-  credentials: 'include'
-});
-```
-
 ---
 
-### `GET /user` (Defined in `src/modules/users/user.routes.js`)
+### `GET /api/v1/profile/view` (Defined in [profile.routes.js](file:///Users/ada/Desktop/BackendL/src/modules/profile/profile.routes.js))
 
-Fetches a single user by `emailId` from the request body.
+**Protected route** — Returns the authenticated user's profile information.
 
-**Request Body (JSON):**
-
-```json
-{
-  "emailId": "john@example.com"
-}
-```
+**Auth:** Requires valid `token` JWT cookie (`userAuth` middleware).
 
 **Response:**
-- `200 OK` — The matched user object
-- `404 Not Found` — `"user not found"` (if no match) or error message
-
-```js
-// Example usage
-fetch('http://localhost:5555/user', {
-  method: 'GET',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ emailId: 'john@example.com' })
-});
-```
+- `200 OK` — Authenticated user object
 
 ---
 
-### `GET /feed` (Defined in `src/modules/feed/feed.routes.js`)
+### `PATCH /api/v1/profile/edit` (Defined in [profile.routes.js](file:///Users/ada/Desktop/BackendL/src/modules/profile/profile.routes.js))
 
-Fetches **all users** from the database. No request body required.
+**Protected route** — Updates authenticated user's profile. Allowed fields: `firstName`, `lastName`, `emailId`, `photoUrl`, `about`, `age`, `skills`.
 
-**Response:**
-- `200 OK` — Array of all user objects
-- `404 Not Found` — Error message string
-
-```js
-// Example usage
-fetch('http://localhost:5555/feed');
-```
-
----
-
-### `DELETE /user` (Defined in `src/modules/users/user.routes.js`)
-
-Deletes a user from the database by `userId` from the request body.
-
-**Request Body (JSON):**
-
-```json
-{
-  "userId": "64abc123def456"
-}
-```
-
-**Response:**
-- `201` — `"UserDeleted Successfully"`
-- `400 Bad Request` — `"Deletion Failed: <error>"`
-
-```js
-// Example usage
-fetch('http://localhost:5555/user', {
-  method: 'DELETE',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ userId: '64abc123def456' })
-});
-```
-
----
-
-### `GET /profile/view` (Defined in `src/modules/profiles/profile.routes.js`)
-
-A **protected route** — returns the authenticated user's full profile from the database.
-
-**Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.middleware.js`). Requires a valid `token` JWT cookie (set during `/login`).
-
-**Profile flow:**
-1. `userAuth` middleware reads the `token` cookie and verifies the JWT.
-2. Middleware looks up the user by `_id` from the decoded token and attaches it to `req.user`.
-3. The route handler reads `req.user` and sends the user document back.
-
-**Response:**
-- `200 OK` — The authenticated user's document
-- `400 Bad Request` — `{ "message": "Error saving user", "error": "..." }`
-
-```js
-// Example usage (cookie sent automatically by browser after login)
-fetch('http://localhost:5555/profile/view', {
-  credentials: 'include'
-});
-```
-
----
-
-### `PATCH /profile/edit` (Defined in `src/modules/profiles/profile.routes.js`)
-
-A **protected route** — updates the authenticated user's profile data. Only allowed fields are accepted for editing: `firstName`, `lastName`, `emailId`, `photoUrl`, `about`, `age`, and `skills`.
-
-**Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.middleware.js`). Requires a valid `token` JWT cookie.
-
-**Edit flow:**
-1. **Validate input** — `validateEditProfileData(req.body)` from `src/modules/profiles/profile.schema.js` checks that only allowed fields are present in the request body.
-2. **Update user** — Updates the fields on the logged-in user document and saves it back to MongoDB, running Mongoose validators.
+**Auth:** Requires valid `token` JWT cookie (`userAuth` middleware).
 
 **Request Body (JSON):**
 
 ```json
 {
   "firstName": "John",
-  "lastName": "Doe",
-  "about": "New bio details",
+  "about": "Updated bio text",
   "skills": ["JavaScript", "Node.js", "React"]
 }
 ```
 
 **Response:**
-- `200 OK` — `{ "message": "<Name>, your profile updated successfully!!", "data": { ...updatedUserDoc } }`
-- `400 Bad Request` — `{ "message": "Error saving user", "error": "..." }` (validation failure or invalid fields)
-
-```js
-// Example usage
-fetch('http://localhost:5555/profile/edit', {
-  method: 'PATCH',
-  headers: { 'Content-Type': 'application/json' },
-  credentials: 'include',
-  body: JSON.stringify({
-    firstName: 'John',
-    about: 'New bio details'
-  })
-});
-```
-
+- `200 OK` — `{ "message": "John, your profile updated successfully!!", "data": { ... } }`
 
 ---
 
-### `POST /request/send/:status/:toUserId` (Defined in `src/modules/connectionRequests/connectionRequest.routes.js`)
+### `POST /api/v1/request/send/:status/:toUserId` (Defined in [connectionRequest.routes.js](file:///Users/ada/Desktop/BackendL/src/modules/connectionRequest/connectionRequest.routes.js))
 
-A **protected route** — sends a connection request (either `"interested"` or `"ignore"`) to another user.
+**Protected route** — Sends a connection request (`interested` or `ignore`) to target user.
 
-**Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.middleware.js`). Requires a valid `token` JWT cookie.
+**Auth:** Requires valid `token` JWT cookie (`userAuth` middleware).
 
-**Route Parameters:**
-- `status` (String): Must be either `"ignore"` or `"interested"`.
-- `toUserId` (String): The MongoDB ObjectId of the target user.
+**Route Params:**
+- `status`: Must be `"ignore"` or `"interested"`
+- `toUserId`: Target user's MongoDB ObjectId
 
 **Response:**
-- `200 OK` — `{ "message": "<fromUserFirstName>is<status>in<toUserFirstName>", "data": { "fromUserId", "toUserId", "status", "_id", "createdAt", "updatedAt" } }`
-- `400 Bad Request` — `{ "message": "Error sending request", "error": "..." }` (e.g., user not found, invalid status, request already exists, or trying to send request to self)
-
-```js
-// Example usage (cookie sent automatically by browser after login)
-fetch('http://localhost:5555/request/send/interested/64abc123def456', {
-  method: 'POST',
-  credentials: 'include'
-});
-```
+- `200 OK` — `{ "message": "John is interested in Alice", "data": { ... } }`
 
 ---
 
-### `POST /request/review/:status/:requestId` (Defined in `src/modules/connectionRequests/connectionRequest.routes.js`)
+### `POST /api/v1/request/review/:status/:requestId` (Defined in [connectionRequest.routes.js](file:///Users/ada/Desktop/BackendL/src/modules/connectionRequest/connectionRequest.routes.js))
 
-A **protected route** — reviews (accepts or rejects) an incoming connection request.
+**Protected route** — Reviews an incoming connection request (`accepted` or `rejected`).
 
-**Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.middleware.js`). Requires a valid `token` JWT cookie.
+**Auth:** Requires valid `token` JWT cookie (`userAuth` middleware).
 
-**Route Parameters:**
-- `status` (String): Must be either `"accepted"` or `"rejected"`.
-- `requestId` (String): The MongoDB ObjectId of the connection request to review.
+**Route Params:**
+- `status`: Must be `"accepted"` or `"rejected"`
+- `requestId`: Connection request MongoDB ObjectId
 
 **Response:**
-- `200 OK` — `{ "message": "connection request <status>", "data": { ...connectionRequestDoc } }` (e.g. `connection request accepted`)
-- `400 Bad Request` — `{ "message": "Error sending request", "error": "..." }` (e.g. invalid status)
-- `404 Not Found` — `{ "message": "connection request not found" }` (e.g. if request does not exist or isn't addressed to the logged-in user with status `"interested"`)
-
-```js
-// Example usage (accepting a request)
-fetch('http://localhost:5555/request/review/accepted/64abc123def456', {
-  method: 'POST',
-  credentials: 'include'
-});
-```
+- `200 OK` — `{ "message": "connection request accepted", "data": { ... } }`
 
 ---
 
-### `GET /user/request/received` (Defined in `src/modules/users/user.routes.js`)
+### `GET /api/v1/user/request/received` (Defined in [user.routes.js](file:///Users/ada/Desktop/BackendL/src/modules/user/user.routes.js))
 
-A **protected route** — fetches all pending/interested connection requests received by the logged-in user. It automatically populates the sender's (`fromUserId`) details.
+**Protected route** — Fetches all pending connection requests received by the logged-in user.
 
-**Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.middleware.js`). Requires a valid `token` JWT cookie.
+**Auth:** Requires valid `token` JWT cookie (`userAuth` middleware).
 
 **Response:**
-- `200 OK` — `{ "message": "Data fetch successfully", "data": [ ...connectionRequestsWithSenderDetails ] }`
-- `400 Bad Request` — `"failed to update: <error>"`
-
-```js
-// Example usage
-fetch('http://localhost:5555/user/request/received', {
-  method: 'GET',
-  credentials: 'include'
-});
-```
+- `200 OK` — `{ "message": "Data fetched successfully", "data": [ ... ] }`
 
 ---
 
-### `GET /user/connections` (Defined in `src/modules/users/user.routes.js`)
+### `GET /api/v1/user/connections` (Defined in [user.routes.js](file:///Users/ada/Desktop/BackendL/src/modules/user/user.routes.js))
 
-A **protected route** — fetches the active connections (where status is `"accepted"`) of the logged-in user. Only safe fields (`firstName`, `lastName`, `age`, `gender`, `photoUrl`, `about`, `skills`) are returned for the connected users.
+**Protected route** — Fetches active accepted connections for the logged-in user.
 
-**Auth:** Guarded by the `userAuth` middleware (`src/middlewares/auth.middleware.js`). Requires a valid `token` JWT cookie.
+**Auth:** Requires valid `token` JWT cookie (`userAuth` middleware).
 
 **Response:**
 - `200 OK` — `{ "data": [ { "_id", "firstName", "lastName", "age", "gender", "photoUrl", "about", "skills" } ] }`
-- `400 Bad Request` — `"failed to update: <error>"`
-
-```js
-// Example usage
-fetch('http://localhost:5555/user/connections', {
-  method: 'GET',
-  credentials: 'include'
-});
-```
-
 
 ---
 
-### `PATCH /user` (Defined in `src/modules/users/user.routes.js`)
+### `GET /api/v1/feed` (Defined in [feed.routes.js](file:///Users/ada/Desktop/BackendL/src/modules/feed/feed.routes.js))
 
-Updates an existing user's data by `userId`. Pass any fields to update along with the `userId`. Validators are run on update (`runValidators: true`).
+**Protected route** — Fetches user cards for the feed.
+
+**Auth:** Requires valid `token` JWT cookie (`userAuth` middleware).
+
+**Response:**
+- `200 OK` — Array of user profile cards
+
+---
+
+### `GET /api/v1/user` (Defined in [user.routes.js](file:///Users/ada/Desktop/BackendL/src/modules/user/user.routes.js))
+
+**Protected route** — Fetches a single user by `emailId` passed in request body.
 
 **Request Body (JSON):**
-
 ```json
 {
-  "userId": "64abc123def456",
-  "firstName": "UpdatedName",
-  "skills": ["React", "MongoDB"]
+  "emailId": "john@example.com"
 }
 ```
 
-**Response:**
-- `201` — `"user updated successfully"`
-- `400 Bad Request` — `"failed to update: <error>"`
+---
 
-```js
-// Example usage
-fetch('http://localhost:5555/user', {
-  method: 'PATCH',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ userId: '64abc123def456', firstName: 'UpdatedName' })
-});
+### `PATCH /api/v1/user` (Defined in [user.routes.js](file:///Users/ada/Desktop/BackendL/src/modules/user/user.routes.js))
+
+**Protected route** — Updates user data by `userId`.
+
+**Request Body (JSON):**
+```json
+{
+  "userId": "64abc123def456",
+  "firstName": "UpdatedName"
+}
 ```
 
 ---
 
+### `DELETE /api/v1/user` (Defined in [user.routes.js](file:///Users/ada/Desktop/BackendL/src/modules/user/user.routes.js))
+
+**Protected route** — Deletes a user record by `userId`.
+
+**Request Body (JSON):**
+```json
+{
+  "userId": "64abc123def456"
+}
+```
+
+---
 
 ## 👤 User Model
 
-`src/modules/users/user.model.js` defines the Mongoose schema for a user document. The schema includes `timestamps: true`, so each document automatically gets `createdAt` and `updatedAt` fields.
+Defined in [src/modules/user/user.model.js](file:///Users/ada/Desktop/BackendL/src/modules/user/user.model.js).
 
-| Field       | Type       | Required | Constraints / Default                                                                            |
-|-------------|------------|----------|--------------------------------------------------------------------------------------------------|
-| `firstName` | `String`   | ✅ Yes   | `minLength: 3`, `maxLength: 50`                                                                  |
-| `lastName`  | `String`   | ❌ No    | —                                                                                                |
-| `emailId`   | `String`   | ✅ Yes   | `unique`, `lowercase`, `trim`                                                                    |
-| `password`  | `String`   | ✅ Yes   | Stored as a **bcrypt hash** (10 rounds); schema-level validator enforces `isStrongPassword`      |
-| `age`       | `String`   | ❌ No    | `min: 18` *(note: stored as String, min applies to numeric comparison)*                          |
-| `gender`    | `String`   | ❌ No    | Must be `"male"`, `"female"`, or `"others"`                                                      |
-| `photoUrl`  | `String`   | ❌ No    | Default: brain image URL                                                                         |
-| `about`     | `String`   | ❌ No    | Default: `"this is the default about the user"`                                                  |
-| `skills`    | `[String]` | ❌ No    | Array of skill strings                                                                           |
-| `createdAt` | `Date`     | auto     | Auto-generated by Mongoose timestamps                                                            |
-| `updatedAt` | `Date`     | auto     | Auto-generated by Mongoose timestamps                                                            |
+| Field       | Type       | Required | Constraints / Default                                           |
+|-------------|------------|----------|-----------------------------------------------------------------|
+| `firstName` | `String`   | ✅ Yes   | `minLength: 3`, `maxLength: 50`                                 |
+| `lastName`  | `String`   | ❌ No    | —                                                               |
+| `emailId`   | `String`   | ✅ Yes   | `unique`, `lowercase`, `trim`                                   |
+| `password`  | `String`   | ✅ Yes   | Stored as bcrypt hash; schema-level `isStrongPassword` check    |
+| `age`       | `String`   | ❌ No    | Must be numeric string (min 18)                                 |
+| `gender`    | `String`   | ❌ No    | Enum: `"male"`, `"female"`, `"others"`                          |
+| `photoUrl`  | `String`   | ❌ No    | Default photo URL                                               |
+| `about`     | `String`   | ❌ No    | Default: `"this is the default about the user"`                 |
+| `skills`    | `[String]` | ❌ No    | Array of skill strings                                          |
 
 ### Instance Methods
-
-The User model exposes two instance methods defined directly on the schema:
-
-#### `user.getJWT()`
-
-Signs and returns a JWT for the user.
-
-```js
-userModel.methods.getJWT = async function () {
-  const token = await jwt.sign({ _id: this._id }, "Abhay@123", { expiresIn: "7d" });
-  return token;
-};
-```
-
-> ⚠️ The secret is currently hardcoded. Move to `process.env.JWT_SECRET` before production.
-
-#### `user.validatePassword(inputPassword)`
-
-Compares a plaintext password against the stored bcrypt hash. Returns `true` if valid, `false` otherwise.
-
-```js
-userModel.methods.validatePassword = async function (passwordInputByUser) {
-  return bcrypt.compare(passwordInputByUser, this.password);
-};
-```
+- `user.getJWT()`: Generates a signed JWT token for the user.
+- `user.validatePassword(inputPassword)`: Compares input password with stored bcrypt hash.
 
 ---
 
 ## 🤝 Connection Request Model
 
-`src/modules/connectionRequests/connectionRequest.model.js` defines the Mongoose schema for a connection request document. The schema includes `timestamps: true` and a pre-save validation hook.
+Defined in [src/modules/connectionRequest/connectionRequest.model.js](file:///Users/ada/Desktop/BackendL/src/modules/connectionRequest/connectionRequest.model.js).
 
 | Field        | Type                            | Required | Constraints / Default                                                 |
 |--------------|---------------------------------|----------|-----------------------------------------------------------------------|
-| `fromUserId` | `mongoose.Schema.Types.ObjectId`| ✅ Yes   | References the `User` who initiated the request                       |
-| `toUserId`   | `mongoose.Schema.Types.ObjectId`| ✅ Yes   | References the `User` who receives the request                        |
-| `status`     | `String`                        | ✅ Yes   | Must be one of: `"ignore"`, `"interested"`, `"accepted"`, `"rejected"` |
-| `createdAt`  | `Date`                          | auto     | Auto-generated by Mongoose timestamps                                 |
-| `updatedAt`  | `Date`                          | auto     | Auto-generated by Mongoose timestamps                                 |
+| `fromUserId` | `mongoose.Schema.Types.ObjectId`| ✅ Yes   | References sender `User`                                              |
+| `toUserId`   | `mongoose.Schema.Types.ObjectId`| ✅ Yes   | References recipient `User`                                           |
+| `status`     | `String`                        | ✅ Yes   | Enum: `"ignore"`, `"interested"`, `"accepted"`, `"rejected"`          |
 
-### Indexes
+### Indexes & Hooks
+- Compound Index: `{ fromUserId: 1, toUserId: 1 }` for fast lookups.
+- Pre-Save Hook: Throws error if `fromUserId` equals `toUserId` (prevent self connection requests).
 
-#### Compound Index `{ fromUserId: 1, toUserId: 1 }`
-A compound index is defined on both `fromUserId` and `toUserId` to speed up database queries (e.g. checking if a connection request already exists between two users).
-
-### Schema Hooks
-
-#### Pre-Save Hook (`save`)
-A pre-save hook validates that users cannot send a connection request to themselves. If `fromUserId` equals `toUserId`, it throws an error: `"cannot send request to self"`.
+---
 
 ## 🛡️ Validation Schemas
 
-Validation logic is modularized and lives within each feature's `*.schema.js` file:
-
-- **[auth.schema.js](file:///Users/ada/Desktop/BackendL/src/modules/auth/auth.schema.js)**: Validates signup/login data (e.g. email formats, name limits, strong passwords).
-- **[profile.schema.js](file:///Users/ada/Desktop/BackendL/src/modules/profiles/profile.schema.js)**: Validates edit fields (`firstName`, `photoUrl`, `skills`, etc.) ensuring only allowed attributes are accepted.
-- **[user.schema.js](file:///Users/ada/Desktop/BackendL/src/modules/users/user.schema.js)**: Validates admin updates, search query email formats, and object ID requirements.
-- **[connectionRequest.schema.js](file:///Users/ada/Desktop/BackendL/src/modules/connectionRequests/connectionRequest.schema.js)**: Enforces validation on status transitions (`ignore`/`interested` for send, `accepted`/`rejected` for review) and correct MongoDB ObjectId formats.
-
-Validation check methods throw plain standard errors that are caught by controller `asyncHandler` wrappers and formatted cleanly by the global error middleware.
+Validation logic is structured in feature schema files:
+- [auth.schema.js](file:///Users/ada/Desktop/BackendL/src/modules/auth/auth.schema.js): Signup & login data validation
+- [profile.schema.js](file:///Users/ada/Desktop/BackendL/src/modules/profile/profile.schema.js): Profile edit allowed fields validation
+- [user.schema.js](file:///Users/ada/Desktop/BackendL/src/modules/user/user.schema.js): User update/get/delete validation
+- [connectionRequest.schema.js](file:///Users/ada/Desktop/BackendL/src/modules/connectionRequest/connectionRequest.schema.js): Status transitions and ObjectId validation
 
 ---
 
 ## 🔐 Authentication
 
-### `userAuth` Middleware (`src/middlewares/auth.middleware.js`)
-
-All protected routes use the `userAuth` middleware, which handles JWT verification and user lookup:
-
-**Middleware flow:**
-1. Read the `token` cookie from the request — throw `"token is not valid!!...."` if missing.
-2. Verify the JWT with `jwt.verify(token, "Abhay@123")` — throw if invalid or expired.
-3. Check the decoded payload is truthy — throw `"jwt is expired"` if falsy.
-4. Extract `_id` from the decoded payload and fetch the user from MongoDB — throw `"User not found"` if no match.
-5. Attach the user document to `req.user` and call `next()` to proceed to the route handler.
-
-```js
-const { userAuth } = require('./middlewares/auth');
-
-// Protect any route by adding userAuth as middleware
-router.get('/profile/view', userAuth, async (req, res) => {
-  const user = req.user; // user is already fetched and validated
-  res.send(user);
-});
-```
-
-**Currently protected routes:**
-- `GET /profile/view` (Defined in `src/modules/profiles/profile.routes.js`) — uses `userAuth`
-- `PATCH /profile/edit` (Defined in `src/modules/profiles/profile.routes.js`) — uses `userAuth`
-- `POST /request/send/:status/:toUserId` (Defined in `src/modules/connectionRequests/connectionRequest.routes.js`) — uses `userAuth`
-
-
-> 💡 **Note:** The JWT secret is loaded from environment configuration (`src/config/env.js`).
-
-### JWT Signing (`user.getJWT()`)
-
-JWT signing has been moved out of `app.js` and into the **User model instance method** `getJWT()`. The `/login` route now calls it as:
-
-```js
-const token = await user.getJWT();
-res.cookie("token", token, { expires: new Date(Date.now() + 8 * 3600000) });
-```
-
-### Password Verification (`user.validatePassword()`)
-
-Password comparison has been moved out of `app.js` and into the **User model instance method** `validatePassword()`. The `/login` route now calls it as:
-
-```js
-const isPasswordValid = await user.validatePassword(password);
-```
+Guarded by `userAuth` middleware ([src/middlewares/auth.middleware.js](file:///Users/ada/Desktop/BackendL/src/middlewares/auth.middleware.js)):
+1. Reads `token` cookie.
+2. Verifies token using `verifyToken(token)` from [src/utils/token.js](file:///Users/ada/Desktop/BackendL/src/utils/token.js).
+3. Fetches user by decoded `_id` and attaches to `req.user`.
 
 ---
 
 ## 🗄️ Database Connection
 
-`src/config/database.js` exports an async `connectDB` function using Mongoose. The server only starts **after** a successful DB connection:
-
-```js
-connectDB()
-  .then(() => {
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-  })
-  .catch(err => console.error('Database connection failed:', err));
-```
-
-> ⚠️ The MongoDB URI is currently **hardcoded** in `database.js`. Move it to an environment variable (`process.env.MONGO_URI`) before deploying.
-
----
-
-## 🔧 Git Initialization (First Time Setup)
-
-```bash
-git init
-git add .
-git commit -m "first commit"
-git branch -M main
-git remote add origin https://github.com/abhaythanak/newBKAbhay.git
-git push -u origin main
-```
+Mongoose database connection is established in [src/config/database.js](file:///Users/ada/Desktop/BackendL/src/config/database.js) using environment variables configured in [src/config/env.js](file:///Users/ada/Desktop/BackendL/src/config/env.js).
 
 ---
 
 ## 📜 Scripts
 
-| Command       | Description                              |
-|---------------|------------------------------------------|
-| `npm run dev` | Start server with nodemon (watch mode)   |
-| `npm start`   | Start server with nodemon                |
+| Command       | Description                            |
+|---------------|----------------------------------------|
+| `npm run dev` | Start server with nodemon (watch mode) |
+| `npm start`   | Start server with nodemon              |
 
 ---
 
 ## 📦 Dependencies
 
-| Package         | Version     | Purpose                                          |
-|-----------------|-------------|--------------------------------------------------|
-| `express`       | `^5.2.1`    | HTTP server framework                            |
-| `mongoose`      | `^9.6.3`    | MongoDB ODM                                      |
-| `bcrypt`        | `^6.0.0`    | Password hashing (10 salt rounds)                |
-| `jsonwebtoken`  | `^9.0.3`    | JWT signing and verification for auth            |
-| `validator`     | `^13.15.35` | String validation (email, password strength...)  |
-| `cookie-parser` | `^1.4.7`    | Parse and set HTTP cookies                       |
-| `nodemon`       | `^3.1.14`   | Auto-reload on file changes (devDependency)      |
+| Package         | Version     | Purpose                                         |
+|-----------------|-------------|-------------------------------------------------|
+| `express`       | `^5.2.1`    | HTTP server framework                           |
+| `mongoose`      | `^9.6.3`    | MongoDB ODM                                     |
+| `bcrypt`        | `^6.0.0`    | Password hashing                                |
+| `jsonwebtoken`  | `^9.0.3`    | JWT token signing & verification                |
+| `validator`     | `^13.15.35` | String and email validation                     |
+| `cookie-parser` | `^1.4.7`    | Parse and read HTTP cookies                     |
+| `dotenv`        | `^17.2.3`   | Environment configuration loader                |
+| `nodemon`       | `^3.1.14`   | Auto-reload dev dependency                      |
 
 ---
 
 ## 📄 License
 
-ISC © at
+ISC ©
