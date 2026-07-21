@@ -280,9 +280,13 @@ Clears the `token` session cookie.
 
 ### `GET /api/v1/feed` (Defined in [feed.routes.js](file:///Users/ada/Desktop/BackendL/src/modules/feed/feed.routes.js))
 
-**Protected route** — Fetches user cards for the feed.
+**Protected route** — Fetches user cards for the feed with pagination support.
 
 **Auth:** Requires valid `token` JWT cookie (`userAuth` middleware).
+
+**Query Parameters:**
+- `page` (optional, integer, default: `1`): Page number
+- `limit` (optional, integer, default: `10`, max: `50`): Number of profiles per page
 
 **Response:**
 - `200 OK` — Array of user profile cards

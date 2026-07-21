@@ -210,10 +210,13 @@ Fetch active connections (`accepted`) of the logged-in user.
 ---
 
 ### 10. Feed
-Get potential user matches for the logged-in user feed.
+Get potential user matches for the logged-in user feed with support for pagination.
 * **Method:** `GET`
 * **Route:** `/api/v1/feed`
 * **Authentication:** Requires `token` Cookie (`userAuth`)
+* **Query Parameters:**
+  * `page` *(optional, number, default: `1`)*: Page number for pagination
+  * `limit` *(optional, number, default: `10`, max: `50`)*: Number of user cards per page
 * **Response:**
   `200 OK` — Array of user profile cards
 

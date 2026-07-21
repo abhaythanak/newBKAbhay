@@ -17,6 +17,12 @@ router.get("/feed", userAuth, async (req, res) => {
         const SAFE_DATA = "firstName lastName age gender photoUrl about skills";
         const loggedInUser = req.user
 
+        // pagination 
+        const page = parseInt(req.query.page) || 1;
+        let limit = parseInt(req.query.limit) || 10;
+        limit = limit > 50 ? 50 : limit
+        const skip = (page - 1) * limit;
+
         // find All (see) connection request sent or received
         const connectionRequest = await ConnectionRequestModel.find({
             $or: [{ fromUserId: loggedInUser._id }, { toUserId: loggedInUser._id }],
@@ -35,7 +41,7 @@ router.get("/feed", userAuth, async (req, res) => {
                 { _id: { $nin: Array.from(hideUserFromFeed) } },
                 { _id: { $ne: loggedInUser._id } },
             ]
-        }).select(SAFE_DATA)
+        }).select(SAFE_DATA).skip(skip).limit(limit)
 
         res.send(users)
 
