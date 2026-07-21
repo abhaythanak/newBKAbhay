@@ -6,8 +6,8 @@ const { userAuth } = require("../../middlewares/auth.middleware");
 router.get("/user/request/received", userAuth, userController.getReceivedRequests);
 router.get("/user/connections", userAuth, userController.getConnections);
 
-router.patch("/user", userController.updateUser);
-router.get("/user", userController.getUser);
-router.delete("/user", userController.deleteUser);
+router.patch("/user", userAuth, userController.updateUser);
+router.get("/user", userAuth, userController.getUser);
+router.delete("/user", userAuth, userController.deleteUser);
 
 module.exports = router;
