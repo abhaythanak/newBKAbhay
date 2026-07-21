@@ -8,9 +8,9 @@ const errorHandler = require("./middlewares/error.middleware");
 // Routes imports
 const authRouter = require("./modules/auth/auth.routes");
 const feedRouter = require("./modules/feed/feed.routes");
-const profileRouter = require("./modules/profiles/profile.routes");
-const requestRouter = require("./modules/connectionRequests/connectionRequest.routes");
-const userRouter = require("./modules/users/user.routes");
+const profileRouter = require("./modules/profile/profile.routes");
+const requestRouter = require("./modules/connectionRequest/connectionRequest.routes");
+const userRouter = require("./modules/user/user.routes");
 
 const app = express();
 
@@ -18,11 +18,11 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Register API routes
-app.use("/", authRouter);
-app.use("/", feedRouter);
-app.use("/", profileRouter);
-app.use("/", requestRouter);
-app.use("/", userRouter);
+app.use("/api/v1", authRouter);
+app.use("/api/v1", feedRouter);
+app.use("/api/v1", profileRouter);
+app.use("/api/v1", requestRouter);
+app.use("/api/v1", userRouter);
 
 // 404 handler
 app.use(notFound);
