@@ -3,6 +3,8 @@ const router = express.Router();
 const feedController = require("./feed.controller");
 const { userAuth } = require("../../middlewares/auth.middleware");
 const ConnectionRequestModel = require("../connectionRequest/connectionRequest.model");
+const User = require("../user/user.model");
+
 
 router.get("/feed", userAuth, async (req, res) => {
     try {
@@ -36,7 +38,7 @@ router.get("/feed", userAuth, async (req, res) => {
             hideUserFromFeed.add(req.toUserId.toString());
         })
         console.log(hideUserFromFeed)
-        const users = await UserActivation.find({
+        const users = await User.find({
             $and: [
                 { _id: { $nin: Array.from(hideUserFromFeed) } },
                 { _id: { $ne: loggedInUser._id } },

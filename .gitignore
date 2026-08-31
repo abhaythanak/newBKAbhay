@@ -26,6 +26,8 @@ pids/
 # Build output
 dist/
 build/
+.next/
+out/
 
 # OS files
 .DS_Store
