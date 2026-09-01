@@ -10,8 +10,8 @@ const publicRoutes = ['/login', '/signup', '/'];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { useProfile } = useAuth();
-  const { data: user, isLoading: isQueryLoading } = useProfile();
-  const { isLoading: isStoreLoading, setLoading } = useAuthStore();
+  const { isLoading: isQueryLoading } = useProfile();
+  const { user, isLoading: isStoreLoading, setLoading } = useAuthStore();
   const pathname = usePathname();
   const router = useRouter();
 

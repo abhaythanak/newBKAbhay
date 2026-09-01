@@ -6,16 +6,17 @@ interface UserCardProps {
 
 export const UserCard = ({ user }: UserCardProps) => {
   return (
-    <div className="bg-neutral-800 rounded-xl overflow-hidden shadow-xl border border-neutral-700 w-full max-w-sm mx-auto">
+    <div className="bg-neutral-800 rounded-xl overflow-hidden shadow-xl border border-neutral-700 w-full max-w-sm mx-auto select-none pointer-events-none">
       <div className="relative h-80 w-full bg-neutral-700">
         {user.photoUrl ? (
           <img 
             src={user.photoUrl} 
             alt={`${user.firstName} ${user.lastName}`}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover pointer-events-none"
+            draggable="false"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-neutral-500 text-4xl">
+          <div className="w-full h-full flex items-center justify-center text-neutral-500 text-4xl pointer-events-none">
             {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
           </div>
         )}

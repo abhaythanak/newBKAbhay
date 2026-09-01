@@ -32,7 +32,7 @@ router.get("/feed", userAuth, async (req, res) => {
         //.populate("firstName", "lastName", "photoUrl", "about", "age", "gender", "emaiId", "skills")
 
         // hide user from feed 
-        const hideUserFromFeed = new set()
+        const hideUserFromFeed = new Set()
         connectionRequest.forEach((req) => {
             hideUserFromFeed.add(req.fromUserId.toString());
             hideUserFromFeed.add(req.toUserId.toString());

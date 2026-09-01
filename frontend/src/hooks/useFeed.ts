@@ -14,9 +14,7 @@ export const useFeed = () => {
     mutationFn: ({ status, toUserId }: { status: 'interested' | 'ignored'; toUserId: string }) => 
       feedAPI.sendRequest(status, toUserId),
     onSuccess: (data, variables) => {
-      // Optimistically remove the user from the feed or refetch
       toast.success(variables.status === 'interested' ? 'Interested!' : 'Passed');
-      queryClient.invalidateQueries({ queryKey: ['feed'] });
     },
     onError: (error: any) => {
       toast.error(error?.response?.data?.message || 'Failed to send request');
