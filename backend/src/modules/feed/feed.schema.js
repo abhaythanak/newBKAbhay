@@ -1,7 +1,7 @@
 const validateFeedQuery = (query) => {
-    // empty validation
+  // empty validation
 };
 
 module.exports = {
-    validateFeedQuery
+  validateFeedQuery,
 };

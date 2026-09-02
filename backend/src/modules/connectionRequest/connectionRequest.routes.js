@@ -4,15 +4,15 @@ const connectionRequestController = require("./connectionRequest.controller");
 const { userAuth } = require("../../middlewares/auth.middleware");
 
 router.post(
-    "/request/send/:status/:toUserId",
-    userAuth,
-    connectionRequestController.sendRequest
+  "/request/send/:status/:toUserId",
+  userAuth,
+  connectionRequestController.sendRequest,
 );
 
 router.post(
-    "/request/review/:status/:requestId",
-    userAuth,
-    connectionRequestController.reviewRequest
+  "/request/review/:status/:requestId",
+  userAuth,
+  connectionRequestController.reviewRequest,
 );
 
 module.exports = router;
