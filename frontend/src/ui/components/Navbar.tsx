@@ -32,6 +32,7 @@ export function Navbar() {
                 <Link href="/feed" className="text-sm font-medium text-neutral-300 hover:text-white transition-colors">Feed</Link>
                 <Link href="/connections" className="text-sm font-medium text-neutral-300 hover:text-white transition-colors">Connections</Link>
                 <Link href="/requests" className="text-sm font-medium text-neutral-300 hover:text-white transition-colors">Requests</Link>
+                <Link href="/messages" className="text-sm font-medium text-neutral-300 hover:text-white transition-colors">Messages</Link>
                 
                 <Link href="/profile" className="flex items-center space-x-2 bg-white/5 rounded-full px-4 py-1.5 border border-white/10 hover:bg-white/10 transition-colors">
                   {user.photoUrl ? (
