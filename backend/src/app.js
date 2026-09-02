@@ -19,7 +19,7 @@ app.use(
   cors({
     origin: true, // Allow any incoming origin for local development
     credentials: true,
-  })
+  }),
 );
 app.use(express.json());
 app.use(cookieParser());
