@@ -88,7 +88,7 @@ api.interceptors.request.use(
   }
 );
 
-let isRefreshing = false;
+const isRefreshing = false;
 let failedQueue: {
   resolve: (token: string | null) => void;
   reject: (error: any) => void;

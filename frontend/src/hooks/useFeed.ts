@@ -11,7 +11,7 @@ export const useFeed = () => {
   });
 
   const sendRequestMutation = useMutation({
-    mutationFn: ({ status, toUserId }: { status: 'interested' | 'ignored'; toUserId: string }) => 
+    mutationFn: ({ status, toUserId }: { status: 'interested' | 'ignore'; toUserId: string }) => 
       feedAPI.sendRequest(status, toUserId),
     onSuccess: (data, variables) => {
       toast.success(variables.status === 'interested' ? 'Interested!' : 'Passed');
